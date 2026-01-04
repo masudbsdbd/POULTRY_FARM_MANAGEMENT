@@ -1,0 +1,846 @@
+<!-- ========== Left Sidebar Start ========== -->
+<div class="app-menu">
+
+    <div class="logo-box">
+        <a href="{{ route('dashboard') }}" class="logo-light">
+            <img src="{{ asset('uploads/logo/' . gs()->logo) }}" alt="logo" class="logo-lg">
+            <img src="{{ asset('uploads/logo/' . gs()->logo) }}" alt="small logo" class="logo-sm">
+        </a>
+        <a href="{{ route('dashboard') }}" class="logo-dark">
+            <img src="{{ asset('uploads/logo/' . gs()->logo) }}" alt="dark logo" class="logo-lg">
+            <img src="{{ asset('uploads/logo/' . gs()->logo) }}" alt="small logo" class="logo-sm">
+        </a>
+    </div>
+
+    <div class="scrollbar h-100" data-simplebar>
+
+        <!-- User box -->
+        <div class="user-box text-center">
+            <img src="/images/users/user-1.jpg" alt="user-img" title="Mat Helme" class="rounded-circle avatar-md">
+            <div class="dropdown">
+                <a href="javascript: void(0);" class="dropdown-toggle h5 mb-1 d-block" data-bs-toggle="dropdown">Geneva
+                    Kennedy</a>
+                <div class="dropdown-menu user-pro-dropdown">
+
+                    <!-- item-->
+                    <a href="javascript:void(0);" class="dropdown-item notify-item">
+                        <i class="fe-user me-1"></i>
+                        <span>My Account</span>
+                    </a>
+
+                    <!-- item-->
+                    <a href="javascript:void(0);" class="dropdown-item notify-item">
+                        <i class="fe-settings me-1"></i>
+                        <span>Settings</span>
+                    </a>
+
+                    <!-- item-->
+                    <a href="javascript:void(0);" class="dropdown-item notify-item">
+                        <i class="fe-lock me-1"></i>
+                        <span>Lock Screen</span>
+                    </a>
+
+                    <!-- item-->
+                    <a href="javascript:void(0);" class="dropdown-item notify-item">
+                        <i class="fe-log-out me-1"></i>
+                        <span>Logout</span>
+                    </a>
+
+                </div>
+            </div>
+            <p class="text-muted mb-0">Admin Head</p>
+        </div>
+
+        <!--- Sidemenu -->
+
+        <ul id="side-menu" class="menu">
+
+            <li class="menu-title">Navigation</li>
+
+            <li class="menu-item ">
+                <a href="{{ route('dashboard') }}" class="menu-link">
+                    <span class="menu-icon">
+                        <i class="mdi mdi-view-dashboard"></i>
+                    </span>
+                    <span class="menu-text"> Dashboard </span>
+                </a>
+            </li>
+
+            <li class="menu-title">Apps</li> 
+            @can('user-list')
+            <li class="menu-item">
+                <a href="#manageRoles" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-database-outline"></i></span>
+                    <span class="menu-text"> Users </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageRoles">
+                    <ul class="sub-menu">
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('users.index') }}"><span class="menu-text">Manage
+                                        Users</span></a>
+                            </li>
+                        @can('role-list')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('roles.index') }}"><span class="menu-text">Manage
+                                        Role</span></a>
+
+                            </li>
+                        @endcan
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            @can('product-list')
+            <li class="menu-item">
+                <a href="#manageProducts" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-apps"></i></span>
+                    <span class="menu-text"> Products </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageProducts">
+                    <ul class="sub-menu">
+                            <li class="menu-item">
+                                <a href="{{ route('product.index') }}" class="menu-link">
+                                    <span class="menu-text"> All Products </span>
+                                </a>
+                            </li>
+
+                        @can('category-list')
+                            <li class="menu-item">
+                                <a href="{{ route('category.index') }}" class="menu-link">
+                                    <span class="menu-text"> Categories </span>
+                                </a>
+                            </li>
+                        @endcan
+
+                        @can('sub-category-list')
+                            @if (gs()->subcategory_module == 1)
+                                <li class="menu-item">
+                                    <a href="{{ route('subcategory.index') }}" class="menu-link">
+                                        <span class="menu-text"> Subcategories </span>
+                                    </a>
+                                </li>
+                            @endif
+                        @endcan
+
+                        @can('brand-list')
+                            @if (gs()->brand_module == 1)
+                                <li class="menu-item">
+                                    <a href="{{ route('brand.index') }}" class="menu-link">
+                                        <span class="menu-text"> Brands </span>
+                                    </a>
+                                </li>
+                            @endif
+                        @endcan
+                        @can('unit-list')
+
+                        <li class="menu-item">
+                            <a href="{{ route('unit.index') }}" class="menu-link">
+                                <span class="menu-text"> Product Unit </span>
+                            </a>
+                        </li>
+                        @endcan
+
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+
+            @can('customer-list')
+
+            <li class="menu-item">
+                <a href="#manageCustomers" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
+                    <span class="menu-text"> Customers </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageCustomers">
+                    <ul class="sub-menu">
+                        {{--@can('customer-create')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('customer.create') }}"><span class="menu-text">Add
+                                        Customer</span></a>
+                            </li>
+                        @endcan--}}
+
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('customer.index') }}"><span class="menu-text">All
+                                        Customers</span></a>
+                            </li>
+                        {{-- <li class="menu-item">
+                            <a class="menu-link" href="{{ route('customer.advance.index') }}"><span
+                            class="menu-text">Advance List</span></a>
+                         </li> --}}
+                         @can('customer-type-list')
+                         <li class="menu-item">
+                            <a class="menu-link" href="{{ route('setting.customer.type') }}"><span
+                                    class="menu-text">Customer Type</span></a>
+                           @endcan
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+
+            {{-- @can('supplier-list')
+            <li class="menu-item">
+                <a href="#manageSuppliers" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-account-box"></i></span>
+                    <span class="menu-text"> Suppliers </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageSuppliers">
+                    <ul class="sub-menu">
+                        @can('supplier-create')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('supplier.create') }}"><span class="menu-text">Add
+                                        Supplier</span></a>
+                            </li>
+                        @endcan
+
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('supplier.index') }}"><span class="menu-text">All
+                                        Supplier</span></a>
+                            </li>
+
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('supplier.advance.index') }}"><span
+                    class="menu-text">Advance List</span></a>
+                     </li> 
+                    </ul>
+                </div>
+            </li>
+            @endcan --}}
+
+            <li class="menu-item">
+                <a href="#manageEmployee" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
+                    <span class="menu-text"> Quotations </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageEmployee">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('quotation.index') }}"><span class="menu-text">All
+                                    Quotations</span></a>
+                        </li>
+                        {{--<li class="menu-item">
+                            <a class="menu-link" href="{{ route('quotation.item.index') }}"><span
+                                    class="menu-text">Quotation Items </span></a>
+                        </li>--}}
+
+                    </ul>
+                </div>
+            </li>
+
+            {{-- inventory management start --}}
+            <li class="menu-item">
+                <a href="#inventory_manage" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-checkbox-marked-circle"></i></span>
+                    <span class="menu-text"> Inventory </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="inventory_manage">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('warehouse.index') }}"><span
+                                    class="menu-text">Warehouses</span></a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('warehouse.manage') }}"><span
+                                    class="menu-text">Manage Warehouse</span></a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {{-- inventory management end --}}
+
+
+
+            {{-- Invoice management start --}}
+            <li class="menu-item">
+                <a href="#invoice_manage" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-checkbox-marked-circle"></i></span>
+                    <span class="menu-text"> Invoice Management </span>
+                    <span class="menu-arrow"></span>
+                </a>
+            </li>
+            {{-- Invoice management end --}}
+
+            
+            @can('stock-list')
+            <li class="menu-item">
+                <a href="#manageStock" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-package-variant"></i></span>
+                    <span class="menu-text"> Stock </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageStock">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('stock.manage') }}"><span class="menu-text">
+                                    Manage Stock</span></a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('stock.today') }}"><span class="menu-text">Today
+                                    Stock Report</span></a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('stock.month') }}"><span class="menu-text">Monthly
+                                    Stock Report</span></a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('stock.items') }}"><span class="menu-text">All Stock
+                                    Item</span></a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            
+            
+            @can('purchase-list')
+            <li class="menu-item">
+                <a href="#managePurchase" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-cart"></i></span>
+                    <span class="menu-text"> Purchase </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="managePurchase">
+                    <ul class="sub-menu">
+                        <!-- @can('purchase-create')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('purchase.create') }}"><span class="menu-text">Add
+                                        Purchases</span></a>
+                            </li>
+                        @endcan -->
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('purchase.index') }}"><span class="menu-text">All
+                                        Purchases</span></a>
+                            </li>
+                        @can('purchase-return-list')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('supplier-return.index') }}"><span
+                                        class="menu-text">Purchases Return</span></a>
+                            @endcan
+
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            @can('sell-list')
+            <li class="menu-item">
+                <a href="#manageSell" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-checkbox-marked-circle"></i></span>
+                    <span class="menu-text"> Sell </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageSell">
+                    <ul class="sub-menu">
+                        <!-- @can('sell-create')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('sell.create') }}"><span class="menu-text"> New Sell
+                                    </span></a>
+                            </li>
+                        @endcan -->
+
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('sell.index') }}"><span class="menu-text">All
+                                        Sells</span></a>
+                            </li>
+                        @can('sell-return-list')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('customer-return.index') }}"><span
+                                        class="menu-text">Sell Return</span></a>
+                            </li>
+                        @endcan
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            @can('income-list')
+            <li class="menu-item">
+                <a href="#manageIncome" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon">
+                        <i class="mdi mdi-checkbox-multiple-blank-outline"></i>
+                    </span>
+                    <span class="menu-text"> Income </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageIncome">
+                    <ul class="sub-menu">
+
+                        <!-- @can('income-list-create')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('income.list.create') }}"><span
+                                        class="menu-text">Income List Create</span></a>
+                            </li>
+                        @endcan -->
+                        @can('income-list-list')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('income.list.index') }}"><span class="menu-text">All
+                                        income List</span></a>
+                            </li>
+                        @endcan
+                        <!-- @can('income-create')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('income.create') }}"><span class="menu-text">Create
+                                        Income</span></a>
+                            </li>
+                        @endcan -->
+
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('income.index') }}"><span class="menu-text">All
+                                        Income</span></a>
+                            </li>
+
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            @can('expense-list')
+            <li class="menu-item">
+                <a href="#manageExpense" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-sort-variant"></i></span>
+                    <span class="menu-text"> Expense</span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageExpense">
+                    <ul class="sub-menu">
+
+                        @can('expense-head-list')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('expense.head.index') }}"><span class="menu-text">
+                                        All Expense Head</span></a>
+                            </li>
+                        @endcan
+                        <!-- @can('expense-create')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('expense.create') }}"><span class="menu-text">
+                                        Expense Create</span></a>
+                            </li>
+                        @endcan -->
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('expense.index') }}"><span class="menu-text">
+                                        All Expenses </span></a>
+                            </li>
+
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+            @can('investment-list')
+            <li class="menu-item">
+                <a href="#manageInvestment" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><span class="mdi mdi-garage"></span>
+                </span>
+                    <span class="menu-text"> Investments  </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageInvestment">
+                    <ul class="sub-menu">
+                        <!-- @can('investor-list')
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('investor.index') }}"><span class="menu-text">
+                                Investors </span></a>
+                        </li>
+                        @endcan -->
+                        <!-- <li class="menu-item">
+                            <a class="menu-link" href="{{ route('investment.create') }}"><span class="menu-text">
+                                Investment Create </span></a>
+                        </li> -->
+
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('investment.index') }}"><span class="menu-text">
+                                All Investments </span></a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+
+            @can('account-maintain')
+            <li class="menu-item">
+                <a href="#manageAcc" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-chart-line"></i></span>
+                    <span class="menu-text"> Accounts </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageAcc">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('account.statements') }}"><span class="menu-text">
+                                    Account Statements </span></a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('account.cash.statements') }}"><span
+                                    class="menu-text">Cash Statement</span></a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('account.bank.statements') }}"><span
+                                    class="menu-text">Bank Statement</span></a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            @if (gs()->bs_module == 1)
+            @can('balance-sheet-maintain')
+            <li class="menu-item">
+                <a href="#manageBsAcc" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><span class="mdi mdi-chart-areaspline"></span>
+                </span>
+                    <span class="menu-text"> B/S Accounts </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageBsAcc">
+                    <ul class="sub-menu">
+                         <li class="menu-item">
+                            <a class="menu-link" href="{{ route('bs.account.journal.head.index') }}"><span class="menu-text">
+                                    Journal Head  </span></a>
+                        </li> 
+                         <li class="menu-item">
+                            <a class="menu-link" href="{{ route('bs.account.journal.index') }}"><span class="menu-text">
+                                    Journal Entry</span></a>
+                        </li>  
+                        @can('asset-maintain')
+                        <li class="menu-item">
+                            <a href="{{ route('asset.head.index') }}" class="menu-link">
+                                <span class="menu-text"> Asset Heads </span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('asset.index') }}"><span class="menu-text">
+                                Assets </span></a>
+                        </li>
+                        @endcan
+                    
+
+                        <li class="menu-item">
+                            <a href="{{ route('payable.index') }}" class="menu-link">
+                                <span class="menu-text"> Payable Heads </span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('accounts.payable.index') }}"><span class="menu-text">
+                                Accounts Payable </span></a>
+                        </li>
+
+                        <li class="menu-item">
+                            <a href="{{ route('receivable.index') }}" class="menu-link">
+                                <span class="menu-text"> Receivable Heads </span>
+                            </a>
+                        </li>
+
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('accounts.receivable.index') }}"><span class="menu-text">
+                                Accounts Receivable </span></a>
+                        </li>
+
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('bs.account.journal.chart.account') }}"><span class="menu-text">
+                                Chart of Accounts  </span></a>
+                        </li>
+
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            @endif
+
+            
+            @can('balance-sheet-report-list')
+            <li class="menu-item">
+                <a href="#manageBalanceSheet" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-table-large"></i></span>
+                    <span class="menu-text"> Balance Sheet </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageBalanceSheet">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('balance.sheet.report.index') }}"><span
+                                    class="menu-text">All
+                                    Balance Report</span></a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+
+            @can('bank-list')
+            <li class="menu-item">
+                <a href="#manageBank" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-bank"></i></span>
+                    <span class="menu-text"> Bank Info </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageBank">
+                    <ul class="sub-menu">
+                        @can('bank-edit')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('bank.create') }}"><span class="menu-text">Add New
+                                        Bank</span></a>
+                            </li>
+                        @endcan
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('bank.index') }}"><span class="menu-text">Registered
+                                        Banks</span></a>
+                            </li>
+                        @can('bank-diposit')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('bank.transaction.diposit') }}"><span
+                                        class="menu-text">
+                                        Diposit money</span></a>
+                            </li>
+                        @endcan
+                        @can('bank-withdraw')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('bank.transaction.withdraw') }}"><span
+                                        class="menu-text">
+                                        Withdraw money</span></a>
+                            </li>
+                        @endcan
+                        @can('bank-transaction')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('bank.transaction.index') }}"><span
+                                        class="menu-text">
+                                        Bank Transactions</span></a>
+                            </li>
+                        @endcan
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+            {{-- @can('damage-list')
+            <li class="menu-item">
+                <a href="#manageDamage" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-delete-variant"></i></span>
+                    <span class="menu-text"> Damage </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageDamage">
+                    <ul class="sub-menu">
+                        @can('damage-create')
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('damage.create') }}"><span class="menu-text">
+                                        Damage Create</span></a>
+                            </li>
+                        @endcan
+                            <li class="menu-item">
+                                <a class="menu-link" href="{{ route('damage.index') }}"><span class="menu-text">
+                                        Damage Records</span></a>
+                            </li>
+
+
+                    </ul>
+                </div>
+            </li>
+            @endcan --}}
+
+            @can('profit-list')
+
+            <li class="menu-item">
+                <a href="#manageProfit" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-chart-areaspline"></i></span>
+                    <span class="menu-text"> Profit/Loss </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageProfit">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('profit.index') }}"><span class="menu-text">
+                                    Histories</span></a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+            <!-- Delivery Report Start -->
+            @can('delivery-report-list')
+            <li class="menu-item">
+                <a href="#manageDelivery" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-truck"></i></span>
+                    <span class="menu-text"> Delivery Report </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageDelivery">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('delivery.report.index') }}"><span
+                                    class="menu-text">Total
+                                    Deliveries</span></a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            @can('purchase-report-list')
+            <!-- Purchase Report Start -->
+            <li class="menu-item">
+                <a href="#managePurchseReport" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-file-chart"></i></span>
+                    <span class="menu-text"> Purchase Report </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="managePurchseReport">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('purchase-report.index') }}"><span
+                                    class="menu-text">Purchase Report</span></a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+            <!-- Purchase Report End -->
+            <!-- Purchase Report Start -->
+            @can('expense-report-list')
+            <li class="menu-item">
+                <a href="#manageExpenseReport" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-chart-pie"></i></span>
+                    <span class="menu-text"> Expense Report </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageExpenseReport">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('expense.report.index') }}"><span
+                                    class="menu-text">Expense Report</span></a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+            <!-- Purchase Report End -->
+            <!-- Sell Report Start -->
+             @can('sell-report-list')
+            <li class="menu-item">
+                <a href="#manageSellReport" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-signal"></i></span>
+                    <span class="menu-text"> Sell Report </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageSellReport">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('sell-report.index') }}"><span
+                                    class="menu-text">Sell Report</span></a>
+                        </li>
+
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            <!-- Sell Report End -->
+
+            <!-- Discount Report Start -->
+            @can('discount-report-list')
+
+            <li class="menu-item">
+                <a href="#manageDiscount" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-shuffle-variant"></i></span>
+                    <span class="menu-text"> Discount Report </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageDiscount">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('discount-report.purchase.index') }}"><span
+                                    class="menu-text">
+                                    Purchase Discount </span></a>
+                        </li>
+
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('discount-report.sell.index') }}"><span
+                                    class="menu-text">
+                                    Sell Discount </span></a>
+                        </li>
+                    </ul>
+                </div>
+
+            </li>
+            @endcan
+            <!-- Discount Report End -->
+            <!-- Damage Report Start -->
+             @can('damage-report-list')
+            <li class="menu-item">
+                <a href="#manageDamageReport" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-delete-forever"></i></span>
+                    <span class="menu-text"> Damage Report </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="manageDamageReport">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('damage-report.index') }}"><span class="menu-text">
+                                    Damage Report</span></a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            @endcan
+            <!-- Damage Report End -->
+
+             @can('general-setting-maintain')
+            <li class="menu-item">
+                <a class="menu-link" href="#settings" data-bs-toggle="collapse">
+                    <span class="menu-icon"><i class="mdi mdi-wrench"></i></span>
+                    <span class="menu-text"> Settings </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="settings">
+                    <ul class="sub-menu">
+
+                        <li class="menu-item">
+                            <a href="{{ route('setting.general') }}" class="menu-link">
+                                <span class="menu-text"> General Settings</span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            @endcan
+
+
+            <li class="menu-item"></li>
+            <li class="menu-item"></li>
+            <li class="menu-item"></li>
+            <li class="menu-item"></li>
+            <li class="menu-item"></li>
+            
+        </ul>
+
+        {{-- </div> --}}
+        <!-- End Sidebar -->
+
+        <div class="clearfix"></div>
+
+    </div>
+    <!-- Sidebar -left -->
+
+</div>
+<!-- Left Sidebar End -->

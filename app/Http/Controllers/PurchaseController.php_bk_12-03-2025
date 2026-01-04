@@ -1,0 +1,1084 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Account;
+use App\Models\Bank;
+use App\Models\BankTransaction;
+use App\Models\Product;
+use App\Models\Purchase;
+use App\Models\PurchaseItem;
+use App\Models\Supplier;
+use App\Models\PurchaseBatch;
+use App\Models\Stock;
+use App\Models\StockItem;
+use Illuminate\Http\Request;
+use App\Models\BsType;
+use App\Models\Payable;
+use App\Models\BsAccount;
+use App\Models\JournalEntry;
+use App\Models\Receivable;
+
+class PurchaseController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('permission:purchase-list', ['only' => ['index']]);
+        $this->middleware('permission:purchase-create|purchase-edit', ['only' => ['store']]);
+        $this->middleware('permission:purchase-create', ['only' => ['create']]);
+        $this->middleware('permission:purchase-edit', ['only' => ['edit']]);
+        $this->middleware('permission:purchase-delete', ['only' => ['delete']]);
+        $this->middleware('permission:purchase-payment', ['only' => ['payDue']]);
+    }
+    public function index()
+    {
+        $pageTitle = 'Purchase List';
+        $purchases = Purchase::with('items', 'items.product', 'items.product.unit')->notDeleted()->latest()->get();
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+        return view('purchase.index', compact('pageTitle', 'purchases', 'banks'));
+    }
+
+    public function create()
+    {
+        $pageTitle = 'Create New Purchase';
+        $suppliers = Supplier::whereStatus(1)->latest()->get();
+        $products = Product::whereStatus(1)->latest()->get();
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+        return view('purchase.create', compact('pageTitle', 'suppliers', 'products', 'banks'));
+    }
+
+    public function edit($id)
+    {
+        $pageTitle = 'Edit Purchase';
+        $suppliers = Supplier::whereStatus(1)->latest()->get();
+        $products = Product::whereStatus(1)->latest()->get();
+        $purchase = Purchase::findOrFail($id);
+        $purchase_items = $purchase->items;
+        $paymentExist = Account::wherePurchaseId($purchase->id)->whereType(14)->first();
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+
+        return view('purchase.create', compact('pageTitle', 'suppliers', 'products', 'purchase', 'purchase_items', 'banks', 'paymentExist'));
+    }
+
+
+    public function payDue(Request $request, $id)
+    {
+        $purchase = Purchase::whereId($id)->first();
+
+        if ($request->balance > $purchase->due_to_company) {
+            $notify[] = ['error', 'The due amount entered is incorrect. Please verify and try again.'];
+            return back()->withNotify($notify);
+        }
+
+        $bank = Bank::whereId($request->bank_id)->first();
+        if (isset($bank) && $request->balance > $bank->balance) {
+            $notify[] = ['error', 'Insufficient balance in ' . $bank->bank_name];
+            return back()->withNotify($notify);
+        }
+
+        $purchase->due_to_company -= $request->balance;
+        $purchase->payment_received += $request->balance;
+        $purchase->save();
+
+        // == ===== == BS Account Start ==>
+        $bsSubTypeOne = BsType::find(5);
+        $bsSubTypeTwo = BsType::find(1);
+        $bsSubTypeThree = BsType::find(2);
+
+        $journalEntryData = new JournalEntry();
+        $journalEntryData->description = $request->comment ? $request->comment : "Due payment of " . $request->balance . " Tk for this purchase";
+        $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+        $journalEntryData->entry_by = auth()->user()->id;
+        $journalEntryData->amount = $request->balance;
+        $journalEntryData->save();
+
+
+        $creditEntry = new BsAccount();
+        $creditEntry->purchase_id = $purchase->id;
+        $creditEntry->journal_entry_id = $journalEntryData->id;
+        $creditEntry->account_type = $bsSubTypeOne->type;
+        $creditEntry->account_sub_type = $bsSubTypeOne->id;
+        $creditEntry->description = "Paid " . $request->balance . " Tk for this purchase due.";
+        $creditEntry->debit = $request->balance;
+        $creditEntry->credit = 0;
+        $creditEntry->save();
+
+        $debitEntry = new BsAccount();
+        $debitEntry->purchase_id = $purchase->id;
+        $debitEntry->journal_entry_id = $journalEntryData->id;
+
+        if ($request->payment_method == 2) {
+            $debitEntry->account_type = $bsSubTypeThree->type;
+            $debitEntry->account_sub_type = $bsSubTypeThree->id;
+            $debitEntry->description = "Paid " . $request->balance . " Tk from the Bank for purchase due.";
+        } else {
+            $debitEntry->account_type = $bsSubTypeTwo->type;
+            $debitEntry->account_sub_type = $bsSubTypeTwo->id;
+            $debitEntry->description = "Paid " . $request->balance . " Tk from the Cash for purchase due.";
+        }
+
+        $debitEntry->credit = $request->balance;
+        $debitEntry->debit = 0;
+        $debitEntry->save();
+        // == ===== == BS Account End ==>
+
+
+        $accArr = [
+            'purchase_id'       => $purchase->id,
+            'type'              => 8,
+            'debit'             => $request->balance,
+            'description'       => $request->comment ? $request->comment : "Paid the due amount of " . $request->balance . " Tk to the supplier " . $purchase->supplier->name . " for previous Purchase (" . $purchase->batch->batch_code .  ")",
+            'supplier_id'       => $purchase->supplier_id,
+            'payment_method'    => $request->payment_method,
+        ];
+
+        $account = updateAcc($accArr, 'NTR', $purchase->id, 8);
+
+        if ($request->payment_method == 2) {
+
+            $bankTrArr = [
+                'account_id'       => $account->id,
+                'withdrawer_name'  => $request->withdrawer_name,
+                'debit'            => $request->balance,
+                'description'      => 'Company give due to Supplier ' . $purchase->supplier->name . ' And Purchase Batch is ' . $purchase->batch->batch_code,
+                'bank_id'          => $request->bank_id,
+                'check_no'         => $request->check_no,
+            ];
+
+            bankTr($account, $bankTrArr);
+        }
+
+        $notify[] = ['success', 'Purchase Due has been paid successfully.'];
+        return back()->withNotify($notify);
+    }
+
+    public function generatePdf($id)
+    {
+        $mpdf = setPdf();
+        $purchase = Purchase::whereId($id)->first();
+        $html = view('purchase.purchase-invoice', compact('purchase'))->render();
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('purchase-invoice-' . $purchase->id . '.pdf', 'I'))->header('Content-Type', 'application/pdf');
+    }
+
+    public function store(Request $request, $id = 0)
+    {
+        // return $request;
+        $request->validate([
+            'supplier_id'       => 'required',
+            'purchase_date'     => 'required',
+            'products'          => 'required',
+            'qty'               => 'required',
+            'unitPrice'         => 'required',
+            'priceTotal'        => 'required',
+            'totalQuantity'     => 'required',
+            'calculatedPrice'   => 'required',
+        ]);
+
+        if ($id == 0) {
+            $request->validate([
+                'payment_method'    => 'required',
+            ]);
+        }
+
+        $bank = Bank::whereId($request->bank_id)->first();
+        if (isset($bank) && $request->balance > $bank->balance && $id == 0) {
+            $notify[] = ['error', 'Insufficient balance in ' . $bank->bank_name];
+            return back()->withNotify($notify);
+        }
+
+        $productIdArr = $request->products;
+        $qtyArr = $request->qty;
+        $prductUnitPrice = $request->unitPrice;
+        $priceArr = $request->priceTotal;
+
+        // Calculate the original amount. Eliminate discount and commission
+        if (isset($request->commission) && isset($request->discount)) {
+            $amountBeforeDiscount = $request->calculatedPrice + $request->discount;
+            $originalAmount = $amountBeforeDiscount / (1 - $request->commission / 100);
+        } elseif (isset($request->commission)) {
+            $originalAmount = $request->calculatedPrice / (1 - $request->commission / 100);
+        } elseif (isset($request->discount)) {
+            $originalAmount = $request->calculatedPrice + $request->discount;
+        } else {
+            $originalAmount = $request->calculatedPrice;
+        }
+
+        if ($id > 0) {
+
+            // == ===== == BS Account Start ==>
+            // $getPurchaseInventoryData = BsAccount::where('purchase_id', $id)
+            //     ->where('account_type', 1)
+            //     ->where('account_sub_type', 3)
+            //     ->latest()
+            //     ->get();
+
+            // $getPurchasePayableData = BsAccount::where('purchase_id', $id)
+            //     ->where('account_type', 2)
+            //     ->where('account_sub_type', 5)
+            //     ->latest()
+            //     ->get();
+
+            // foreach ($getPurchaseInventoryData as $purchaseData) {
+            //     $purchaseData->debit = 0;
+            //     $purchaseData->save();
+            // }
+
+            // foreach ($getPurchasePayableData as $purchaseData) {
+            //     $purchaseData->credit = 0;
+            //     $purchaseData->save();
+            // }
+
+            $getPurchaseInventoryData = BsAccount::where('purchase_id', $id)
+                ->where('account_type', 1)
+                ->where('account_sub_type', 3)
+                ->latest()
+                ->delete();
+
+            $getPurchasePayableData = BsAccount::where('purchase_id', $id)
+                ->where('account_type', 2)
+                ->where('account_sub_type', 5)
+                ->latest()
+                ->delete();
+
+
+            // == ===== == BS Account End ==>
+
+            $purchase = Purchase::whereId($id)->first();
+            $message = 'Purchase updated successfully';
+            $purchase->update_by         = auth()->user()->id;
+            // $previousTotalPrice = $purchase->total_price;
+            $prviousParchasePaymentReceived = $purchase->payment_received;
+            $prviousCalculatedPrice = $purchase->total_price;
+            $previousStoredSupplier = $purchase->supplier_id;
+
+            $purchaseItems = PurchaseItem::where('purchase_id', $id)->get();
+
+            foreach ($purchaseItems as $single_item) {
+                $stockItem = StockItem::where('product_id', $single_item->product_id)->first();
+                $stockItem->total_purchase_qty -= $single_item->qty;
+                $stockItem->stock -= $single_item->qty;
+                $stockItem->save();
+            }
+        } else {
+            $purchase           = new Purchase();
+            $message            = 'New Purchase created successfully';
+        }
+
+        // $productCalculatedPrice = isset($previousTotalPrice) ? ($request->calculatedPrice == $previousTotalPrice ? $purchase->main_price : $request->calculatedPrice) : $request->calculatedPrice;
+
+        $purchase->supplier_id       = $request->supplier_id;
+        $purchase->purchase_date     = $request->purchase_date;
+        $purchase->total_qty         = $request->totalQuantity;
+        $purchase->main_price        = $originalAmount;
+        $purchase->total_price       = $request->calculatedPrice;
+        $purchase->commission        = $request->commission;
+        $purchase->discount          = $request->discount;
+        $purchase->payment_received  = $id == 0 ? $request->balance : $purchase->payment_received;
+        $purchase->invoice_no        = "purchase-invoice-" . $purchase->id;
+        $purchase->entry_by          = auth()->user()->id;
+        $purchase->entry_date        = now();
+        $purchase->save();
+
+        $purchase->invoice_no        = "purchase-invoice-" . $purchase->id;
+        $purchase->save();
+
+
+        // == ===== == BS Account Start ==>
+        if ($id == 0) {
+
+            if ($request->calculatedPrice < $request->balance) {
+
+                $bsSubTypeOne = BsType::find(3);
+                $bsSubTypeTwo = BsType::find(1);
+                $bsSubTypeThree = BsType::find(2);
+
+                $journalEntryData = new JournalEntry();
+                $journalEntryData->description = "Paid amount of " . $request->balance . " Tk for this purchase.";
+                $journalEntryData->entry_date = $request->purchase_date;
+                $journalEntryData->entry_by = auth()->user()->id;
+                $journalEntryData->amount = $request->balance;
+                $journalEntryData->save();
+
+                $creditEntry = new BsAccount();
+                $creditEntry->purchase_id = $purchase->id;
+                $creditEntry->description = "Added items worth " . $request->calculatedPrice . " Tk into the inventory.";
+                $creditEntry->journal_entry_id = $journalEntryData->id;
+                $creditEntry->account_type = $bsSubTypeOne->type;
+                $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                $creditEntry->debit = $request->calculatedPrice;
+                $creditEntry->credit = 0;
+                $creditEntry->save();
+
+                $debitEntry = new BsAccount();
+                $debitEntry->purchase_id = $purchase->id;
+                $debitEntry->journal_entry_id = $journalEntryData->id;
+
+                if ($request->payment_method == 2) {
+                    $debitEntry->account_type = $bsSubTypeThree->type;
+                    $debitEntry->account_sub_type = $bsSubTypeThree->id;
+                    $debitEntry->description = "Paid " . $request->balance . " Tk for the purchase from the Bank.";
+                } else {
+                    $debitEntry->account_type = $bsSubTypeTwo->type;
+                    $debitEntry->account_sub_type = $bsSubTypeTwo->id;
+                    $debitEntry->description = "Paid " . $request->balance . " Tk for the purchase from the Cash.";
+                }
+                $debitEntry->credit = $request->balance;
+                $debitEntry->debit = 0;
+                $debitEntry->save();
+            } else if ($request->calculatedPrice > $request->balance) {
+
+                $bsSubTypeOne = BsType::find(3);
+                $bsSubTypeTwo = BsType::find(1);
+                $bsSubTypeThree = BsType::find(2);
+
+                $journalEntryData = new JournalEntry();
+                $journalEntryData->description = "Paid amount of " . $request->balance . " Tk for this purchase.";
+                $journalEntryData->entry_date = $request->purchase_date;
+                $journalEntryData->entry_by = auth()->user()->id;
+                $journalEntryData->amount = $request->balance ?? 0;
+                $journalEntryData->save();
+
+                $creditEntry = new BsAccount();
+                $creditEntry->purchase_id = $purchase->id;
+                $creditEntry->description = "Added items worth " . $request->calculatedPrice . " Tk into the inventory.";
+                $creditEntry->journal_entry_id = $journalEntryData->id;
+                $creditEntry->account_type = $bsSubTypeOne->type;
+                $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                $creditEntry->debit = $request->calculatedPrice;
+                $creditEntry->credit = 0;
+                $creditEntry->save();
+
+                if ($request->balance > 0) {
+
+                    $debitEntry = new BsAccount();
+                    $debitEntry->purchase_id = $purchase->id;
+                    $debitEntry->journal_entry_id = $journalEntryData->id;
+                    if ($request->payment_method == 2) {
+                        $debitEntry->account_type = $bsSubTypeThree->type;
+                        $debitEntry->account_sub_type = $bsSubTypeThree->id;
+                        $debitEntry->description = "Paid " . $request->balance . " Tk for the purchase from the Bank.";
+                    } else {
+                        $debitEntry->account_type = $bsSubTypeTwo->type;
+                        $debitEntry->account_sub_type = $bsSubTypeTwo->id;
+                        $debitEntry->description = "Paid " . $request->balance . " Tk for the purchase from the Cash.";
+                    }
+                    $debitEntry->credit = $request->balance ?? 0;
+                    $debitEntry->debit = 0;
+                    $debitEntry->save();
+                }
+            } else if ($request->calculatedPrice == $request->balance) {
+
+                // dd("check");
+
+                $bsSubTypeOne = BsType::find(3);
+                $bsSubTypeTwo = BsType::find(1);
+                $bsSubTypeThree = BsType::find(2);
+
+                $journalEntryData = new JournalEntry();
+                $journalEntryData->description = "Paid the full amount for this purchase. The price is " . $request->calculatedPrice . " Tk.";
+                $journalEntryData->entry_date = $request->purchase_date;
+                $journalEntryData->entry_by = auth()->user()->id;
+                $journalEntryData->amount = $request->calculatedPrice;
+                $journalEntryData->save();
+
+                $creditEntry = new BsAccount();
+                $creditEntry->purchase_id = $purchase->id;
+                $creditEntry->description = "Added items worth " . $request->calculatedPrice . " Tk into the inventory.";
+                $creditEntry->journal_entry_id = $journalEntryData->id;
+                $creditEntry->account_type = $bsSubTypeOne->type;
+                $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                $creditEntry->debit = $request->calculatedPrice;
+                $creditEntry->credit = 0;
+                $creditEntry->save();
+
+                $debitEntry = new BsAccount();
+                $debitEntry->purchase_id = $purchase->id;
+                $debitEntry->journal_entry_id = $journalEntryData->id;
+
+                if ($request->payment_method == 2) {
+                    $debitEntry->account_type = $bsSubTypeThree->type;
+                    $debitEntry->account_sub_type = $bsSubTypeThree->id;
+                    $debitEntry->description = "Paid " . $request->calculatedPrice . " Tk for the purchase from the Bank.";
+                } else {
+                    $debitEntry->account_type = $bsSubTypeTwo->type;
+                    $debitEntry->account_sub_type = $bsSubTypeTwo->id;
+                    $debitEntry->description = "Paid " . $request->calculatedPrice . " Tk for the purchase from the Cash.";
+                }
+
+                $debitEntry->credit = $request->calculatedPrice;
+                $debitEntry->debit = 0;
+                $debitEntry->save();
+            }
+        } else if ($id > 0) {
+
+            if ($request->calculatedPrice < $request->balance) {
+
+                $bsSubTypeOne = BsType::find(3);
+
+                $journalEntryData = new JournalEntry();
+                $journalEntryData->description = "Paid all amount of purchase price (price is " . $request->calculatedPrice . ")";
+                $journalEntryData->entry_date = $request->purchase_date;
+                $journalEntryData->entry_by = auth()->user()->id;
+                $journalEntryData->amount = $request->balance;
+                $journalEntryData->save();
+
+                $creditEntry = new BsAccount();
+                $creditEntry->purchase_id = $purchase->id;
+                $creditEntry->journal_entry_id = $journalEntryData->id;
+                $creditEntry->account_type = $bsSubTypeOne->type;
+                $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                $creditEntry->description = "Added items worth " . showAmount($request->calculatedPrice) . " Tk into the inventory.";
+                $creditEntry->debit = $request->calculatedPrice;
+                $creditEntry->credit = 0;
+                $creditEntry->save();
+            } else if ($request->calculatedPrice > $request->balance) {
+
+                $bsSubTypeOne = BsType::find(3);
+
+                $journalEntryData = new JournalEntry();
+                $journalEntryData->description = "Paid all amount of purchase price (price is " . $request->calculatedPrice . ")";
+                $journalEntryData->entry_date = $request->purchase_date;
+                $journalEntryData->entry_by = auth()->user()->id;
+                $journalEntryData->amount = $request->balance ?? 0;
+
+                $journalEntryData->save();
+
+                $creditEntry = new BsAccount();
+                $creditEntry->purchase_id = $purchase->id;
+                $creditEntry->journal_entry_id = $journalEntryData->id;
+                $creditEntry->account_type = $bsSubTypeOne->type;
+                $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                $creditEntry->description = "Added items worth " . showAmount($request->calculatedPrice) . " Tk into the inventory.";
+                $creditEntry->debit = $request->calculatedPrice;
+                $creditEntry->credit = 0;
+                $creditEntry->save();
+            } else if ($request->calculatedPrice == $request->balance) {
+
+                $bsSubTypeOne = BsType::find(3);
+
+                $journalEntryData = new JournalEntry();
+                $journalEntryData->description = "Paid all amount of purchase price (price is " . $request->calculatedPrice . ")";
+                $journalEntryData->entry_date = $request->purchase_date;
+                $journalEntryData->entry_by = auth()->user()->id;
+                $journalEntryData->amount = $request->calculatedPrice;
+                $journalEntryData->save();
+
+                $creditEntry = new BsAccount();
+                $creditEntry->purchase_id = $purchase->id;
+                $creditEntry->journal_entry_id = $journalEntryData->id;
+                $creditEntry->account_type = $bsSubTypeOne->type;
+                $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                $creditEntry->description = "Added items worth " . showAmount($request->calculatedPrice) . " Tk into the inventory.";
+                $creditEntry->debit = $request->calculatedPrice;
+                $creditEntry->credit = 0;
+                $creditEntry->save();
+            }
+        }
+
+
+
+        // == ===== == BS Account End ==>
+
+
+
+
+        // // calculate commission and discount when edit
+        // if ($id > 0) {
+        //     if (isset($purchase->commission) && isset($purchase->discount)) {
+        //         $afterCommission = ($purchase->commission * $productCalculatedPrice) / 100;
+        //         $productAfterCommission = $productCalculatedPrice - $afterCommission;
+        //         $productCalculatedPrice = $productAfterCommission - $purchase->discount;
+        //     } elseif (isset($purchase->commission)) {
+        //         $afterCommission = ($purchase->commission * $productCalculatedPrice) / 100;
+        //         $productCalculatedPrice = $productCalculatedPrice - $afterCommission;
+        //     } elseif (isset($purchase->discount)) {
+        //         $productCalculatedPrice = $productCalculatedPrice - $purchase->discount;
+        //     }
+        // }
+
+        // // Calculate the original amount. Eliminate discount and commission
+        // if (isset($purchase->commission) && isset($purchase->discount)) {
+        //     $amountBeforeDiscount = $productCalculatedPrice + $purchase->discount;
+        //     $originalAmount = $amountBeforeDiscount / (1 - $purchase->commission / 100);
+        // } elseif (isset($purchase->commission)) {
+        //     $originalAmount = $productCalculatedPrice / (1 - $purchase->commission / 100);
+        // } elseif (isset($purchase->discount)) {
+        //     $originalAmount = $productCalculatedPrice + $purchase->discount;
+        // } else {
+        //     $originalAmount = $productCalculatedPrice;
+        // }
+
+
+        // $purchase->total_price = $productCalculatedPrice;
+        // $purchase->save();
+
+        if ($id == 0) {
+            $batch = new PurchaseBatch();
+            $batch->supplier_id = $request->supplier_id;
+            $batch->purchase_id = $purchase->id;
+            $batch->save();
+
+            $batch->batch_code  = 'SQ' . $batch->id;
+            $batch->save();
+        }
+
+        $findSupplier = Supplier::whereid($request->supplier_id)->first();
+
+        if ($id > 0) {
+            $previousGiven = $purchase->advance;
+
+            $advanceAmount = $prviousParchasePaymentReceived - $request->calculatedPrice;
+            $previousAdvanceAmount = $purchase->purchase_revision_advance;
+
+            $bsSubTypeOne = BsType::find(8);
+            $existingBS = BsAccount::where('purchase_id', $purchase->id)->where('account_type', 1)->where('account_sub_type', 8)->orderBy('id', 'desc')->first();
+
+            if ($prviousParchasePaymentReceived > $request->calculatedPrice) {
+
+                $purchase->purchase_revision_advance = $advanceAmount;
+                $purchase->save();
+
+                $findSupplier->advance -= $previousAdvanceAmount;
+                $findSupplier->save();
+
+                $findSupplier->advance += $advanceAmount;
+                $findSupplier->save();
+
+
+                // == ===== == BS Account Start ==>
+
+
+                if (isset($existingBS)) {
+                    $creditEntry = $existingBS;
+                    $creditEntry->purchase_id = $purchase->id;
+                    $creditEntry->journal_entry_id = $journalEntryData->id;
+                    $creditEntry->account_type = $bsSubTypeOne->type;
+                    $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                    $creditEntry->description = $request->comment ?? "Added Supplier Advance amount of " . showAmount($advanceAmount) . " Tk to supplier " . $findSupplier->name . ".";
+                    $creditEntry->debit = $advanceAmount;
+                    $creditEntry->credit = 0;
+                    $creditEntry->save();
+                } else {
+                    $journalEntryData = new JournalEntry();
+                    $journalEntryData->description = $request->comment ? $request->comment : "Supplier Advance amount of " . showAmount($advanceAmount) . " Tk to supplier " . $findSupplier->name . ".";
+                    $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+                    $journalEntryData->entry_by = auth()->user()->id;
+                    $journalEntryData->amount = $advanceAmount;
+                    $journalEntryData->save();
+
+                    $creditEntry = new BsAccount();
+                    $creditEntry->purchase_id = $purchase->id;
+                    $creditEntry->journal_entry_id = $journalEntryData->id;
+                    $creditEntry->account_type = $bsSubTypeOne->type;
+                    $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                    $creditEntry->description = $request->comment ?? "Added Supplier Advance amount of " . showAmount($advanceAmount) . " Tk to supplier " . $findSupplier->name . ".";
+                    $creditEntry->debit = $advanceAmount;
+                    $creditEntry->credit = 0;
+                    $creditEntry->save();
+                }
+
+                // == ===== == BS Account End ==>
+            } else {
+                $purchase->purchase_revision_advance = 0;
+                $purchase->save();
+
+                $findSupplier->advance -= $previousAdvanceAmount;
+                $findSupplier->save();
+
+                if (isset($existingBS)) {
+                    $existingBS->delete();
+                }
+            }
+
+            if (isset($purchase->advance)) {
+                if ($prviousParchasePaymentReceived > $request->calculatedPrice) {
+
+                    // $advanceAmount = $prviousParchasePaymentReceived - $request->calculatedPrice;
+                    // $findSupplier->advance += $advanceAmount;
+                    // $findSupplier->save();
+
+
+                } else {
+                    if ($findSupplier->id == $previousStoredSupplier) {
+                        $findSupplier->advance += $previousGiven;
+                        $findSupplier->save();
+                    } else {
+                        $previousSupplier = Supplier::whereid($previousStoredSupplier)->first();
+                        $previousSupplier->advance += $previousGiven;
+                        $previousSupplier->save();
+                    }
+
+
+                    // == ===== == BS Account Start ==>
+                    $bsSubTypeOne = BsType::find(8);
+
+                    $journalEntryData = new JournalEntry();
+                    $journalEntryData->description = $request->comment ?
+                        $request->comment :
+                        "Pay back to supplier " . $previousGiven . " Tk as advance. ";
+                    $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+                    $journalEntryData->entry_by = auth()->user()->id;
+                    $journalEntryData->amount = $previousGiven;
+                    $journalEntryData->save();
+
+                    // $creditEntry = new BsAccount();
+                    // $creditEntry->purchase_id = $purchase->id;
+                    // $creditEntry->journal_entry_id = $journalEntryData->id;
+                    // $creditEntry->account_type = $bsSubTypeOne->type;
+                    // $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                    // $creditEntry->debit = $previousGiven;
+                    // $creditEntry->credit = 0;
+                    // $creditEntry->save();
+                    // // == ===== == BS Account End ==>
+
+                }
+            }
+        }
+
+        // dd(1);
+
+        $getAdvance = $findSupplier->advance;
+
+        if ($purchase->payment_received > $request->calculatedPrice) {
+            $due = 0;
+            $purchase->due_to_company = $due;
+            $purchase->save();
+
+            if ($id == 0) {
+
+                $purchases = Purchase::whereSupplierId($findSupplier->id)->where('due_to_company', '>', 0)->get();
+                $totalDues = Purchase::whereSupplierId($findSupplier->id)->sum('due_to_company');
+
+                $remainingBalance = $getAdvance + $purchase->payment_received - $request->calculatedPrice;
+                $inputtedAmount = $remainingBalance;
+                $bulkAmount = 0;
+
+                foreach ($purchases as $item) {
+
+                    if ($inputtedAmount < $item->due_to_company) {
+                        $item->payment_received += $inputtedAmount;
+                        $item->due_to_company   -= $inputtedAmount;
+                        $item->save();
+
+                        // == ===== == BS Account Start ==>
+                        $bsSubTypeOne = BsType::find(5);
+
+                        $journalEntryData = new JournalEntry();
+                        $journalEntryData->description = $request->comment
+                            ? $request->comment
+                            : "Pay supplier " . $inputtedAmount . " Tk as due.";
+                        $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+                        $journalEntryData->entry_by = auth()->user()->id;
+                        $journalEntryData->amount = $inputtedAmount;
+                        $journalEntryData->save();
+
+                        $creditEntry = new BsAccount();
+                        $creditEntry->purchase_id = $item->id;
+                        $creditEntry->description = "Paid " . $inputtedAmount . " Tk for this purchase due.";
+                        $creditEntry->journal_entry_id = $journalEntryData->id;
+                        $creditEntry->account_type = $bsSubTypeOne->type;
+                        $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                        $creditEntry->debit = $inputtedAmount;
+                        $creditEntry->credit = 0;
+                        $creditEntry->save();
+                        // // == ===== == BS Account End ==>
+
+                        break;
+                    } else {
+                        // dd($inputtedAmount);
+                        // dd($item->due_to_company);
+
+                        // == ===== == BS Account Start ==>
+                        $bsSubTypeOne = BsType::find(5);
+
+                        $journalEntryData = new JournalEntry();
+                        $journalEntryData->description = $request->comment
+                            ? $request->comment
+                            : "Pay supplier " . $item->due_to_company . " Tk as due.";
+                        $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+                        $journalEntryData->entry_by = auth()->user()->id;
+                        $journalEntryData->amount = $item->due_to_company;
+                        $journalEntryData->save();
+
+                        $creditEntry = new BsAccount();
+                        $creditEntry->purchase_id = $item->id;
+                        $creditEntry->journal_entry_id = $journalEntryData->id;
+                        $creditEntry->account_type = $bsSubTypeOne->type;
+                        $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                        $creditEntry->description = "Paid " . $item->due_to_company . " Tk for purchase due.";
+                        $creditEntry->debit = $item->due_to_company;
+                        $creditEntry->credit = 0;
+                        $creditEntry->save();
+                        // // == ===== == BS Account End ==>
+
+
+                        $inputtedAmount -= $item->due_to_company;
+                        $bulkAmount += $item->due_to_company;
+
+                        $item->payment_received = $item->total_price;
+                        $item->due_to_company = 0;
+                        $item->save();
+
+
+                        if ($inputtedAmount == 0) {
+                            break;
+                        }
+                    }
+                }
+
+                if ($remainingBalance > $totalDues) {
+                    // dd($remainingBalance, $totalDues);
+                    if ($totalDues == 0) {
+                        $extra = $purchase->payment_received - $request->calculatedPrice;
+                    } else {
+                        $extra = $remainingBalance - $totalDues;
+                    }
+
+                    $findSupplier->advance += $extra;
+                    $findSupplier->save();
+
+                    // == ===== == BS Account Start ==>
+                    $bsSubTypeOne = BsType::find(8);
+                    // $bsSubTypeTwo = BsType::find(5);
+
+                    $journalEntryData = new JournalEntry();
+                    $journalEntryData->description = $request->comment
+                        ? $request->comment
+                        : "Added " . $extra . " Tk as supplier advance.";
+                    $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+                    $journalEntryData->entry_by = auth()->user()->id;
+                    $journalEntryData->amount = $extra;
+                    $journalEntryData->save();
+
+
+                    $creditEntry = new BsAccount();
+                    $creditEntry->purchase_id = $purchase->id;
+                    $creditEntry->journal_entry_id = $journalEntryData->id;
+                    $creditEntry->account_type = $bsSubTypeOne->type;
+                    $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                    $creditEntry->description = "Added " . $extra . " Tk as an advance payment.";
+                    $creditEntry->debit = $extra;
+                    $creditEntry->credit = 0;
+                    $creditEntry->save();
+
+                    // $creditEntry = new BsAccount();
+                    // $creditEntry->purchase_id = $purchase->id;
+                    // $creditEntry->journal_entry_id = $journalEntryData->id;
+                    // $creditEntry->account_type = $bsSubTypeTwo->type;
+                    // $creditEntry->account_sub_type = $bsSubTypeTwo->id;
+                    // $creditEntry->debit = $totalDues;
+                    // $creditEntry->credit = 0;
+                    // $creditEntry->save();
+
+                    // // == ===== == BS Account End ==>
+
+
+                    // // // == ===== == Receivable Account Start ==>
+                    $receivableData = Receivable::where('supplier_id', $findSupplier->id)->first();
+                    if ($receivableData) {
+                        $receivableData->supplier_advance_amount += $extra;
+                        $receivableData->save();
+                    }
+                    // // // == ===== == Receivable Account End ==>
+
+                }
+            }
+        } else {
+
+            if ($getAdvance > 0) {
+
+                $calculatedAdvance = $getAdvance + $purchase->payment_received - $request->calculatedPrice;
+
+                // dd($calculatedAdvance);
+
+                if ($calculatedAdvance > 0) {
+
+                    $due = 0;
+                    $purchase->due_to_company = $due;
+                    $purchase->advance = $getAdvance - $calculatedAdvance;
+                    $purchase->save();
+
+                    $findSupplier->advance = $calculatedAdvance;
+                    $findSupplier->save();
+
+                    // dd($getAdvance - $calculatedAdvance);
+                    // == ===== == BS Account Start ==>
+                    $bsSubTypeOne = BsType::find(8);
+
+                    $journalEntryData = new JournalEntry();
+                    $journalEntryData->description = $request->comment ? $request->comment : "Pay " . $getAdvance - $calculatedAdvance . " Tk from supplier advance";
+                    $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+                    $journalEntryData->entry_by = auth()->user()->id;
+                    $journalEntryData->amount = $getAdvance - $calculatedAdvance;
+                    $journalEntryData->save();
+
+                    $creditEntry = new BsAccount();
+                    $creditEntry->purchase_id = $purchase->id;
+                    $creditEntry->journal_entry_id = $journalEntryData->id;
+                    $creditEntry->account_type = $bsSubTypeOne->type;
+                    $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                    $creditEntry->description = "Pay amount of " . $getAdvance - $calculatedAdvance . " Tk from supplier advance.";
+
+                    $creditEntry->credit = $getAdvance - $calculatedAdvance;
+                    $creditEntry->debit = 0;
+                    $creditEntry->save();
+                    // == ===== == BS Account End ==>
+
+
+
+                    // // // == ===== == Receivable Account Start ==>
+                    $receivableData = Receivable::where('supplier_id', $findSupplier->id)->first();
+                    if ($receivableData) {
+                        $receivableData->supplier_advance_amount -= $getAdvance - $calculatedAdvance;
+                        $receivableData->save();
+                    }
+                    // // // == ===== == Receivable Account End ==>
+
+
+
+                } else {
+
+
+
+                    $due = abs($calculatedAdvance);
+                    $purchase->due_to_company = $due;
+                    $purchase->advance = $getAdvance;
+                    $purchase->save();
+
+                    $findSupplier->advance = 0;
+                    $findSupplier->save();
+
+                    // ACCOUNTS PAYABLE CALCULATION START
+                    $acc_payable = new Payable();
+                    $acc_payable->purchase_id = $purchase->id;
+                    $acc_payable->supplier_id = $purchase->supplier_id;
+                    $acc_payable->payables_head_id = 1;
+                    $acc_payable->invoice_no = $purchase->invoice_no;
+                    $acc_payable->due_amount = $due;
+                    $acc_payable->paid_amount = $request->balance - $acc_payable->due_amount;
+                    $acc_payable->invoice_no = $purchase->invoice_no;
+                    // ACCOUNTS PAYABLE CALCULATION END
+
+                    // dd($due);
+                    // dd($getAdvance, $calculatedAdvance,$due);
+
+                    // == ===== == BS Account Start ==>
+                    $bsSubTypeOne = BsType::find(8);
+                    $bsSubTypeTwo = BsType::find(1);
+                    $bsSubTypeThree = BsType::find(2);
+                    $bsSubTypeFour = BsType::find(5);
+
+                    $journalEntryData = new JournalEntry();
+                    $journalEntryData->description = $request->comment ? $request->comment : "Pay " . showAmount($getAdvance) . " Tk from supplier advance";
+                    $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+                    $journalEntryData->entry_by = auth()->user()->id;
+                    $journalEntryData->amount = $getAdvance;
+                    $journalEntryData->save();
+
+
+                    $creditEntry = new BsAccount();
+                    $creditEntry->purchase_id = $purchase->id;
+                    $creditEntry->journal_entry_id = $journalEntryData->id;
+                    $creditEntry->account_type = $bsSubTypeOne->type;
+                    $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                    $creditEntry->description = "Pay amount of " . showAmount($getAdvance) . " Tk from supplier advance.";
+                    $creditEntry->credit = $getAdvance;
+                    $creditEntry->debit = 0;
+                    $creditEntry->save();
+
+                    if ($due > 0) {
+
+                        $creditEntry = new BsAccount();
+                        $creditEntry->purchase_id = $purchase->id;
+                        $creditEntry->journal_entry_id = $journalEntryData->id;
+                        $creditEntry->account_type = $bsSubTypeFour->type;
+                        $creditEntry->account_sub_type = $bsSubTypeFour->id;
+                        $creditEntry->description = "Due amount for this purchase: " . $due . " Tk.";
+                        $creditEntry->credit = $due;
+                        $creditEntry->debit = 0;
+                        $creditEntry->save();
+                    }
+
+                    // == ===== == BS Account End ==>
+
+
+
+                    // // // == ===== == Receivable Account Start ==>
+                    $receivableData = Receivable::where('supplier_id', $findSupplier->id)->first();
+                    if ($receivableData) {
+                        $receivableData->supplier_advance_amount -= $getAdvance;
+                        $receivableData->save();
+                    }
+                    // // // == ===== == Receivable Account End ==>
+
+
+
+
+
+                }
+            } else {
+
+                $due = $request->calculatedPrice - $purchase->payment_received;
+
+                $purchase->due_to_company = $due;
+                $purchase->save();
+
+                // == ===== == BS Account Start ==>
+                if ($due >  0) {
+                    $bsSubTypeOne = BsType::find(5);
+                    $journalEntryData = new JournalEntry();
+                    $journalEntryData->description = $request->comment ? $request->comment : "Due" . $due . " Tk for this purchase";
+                    $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+                    $journalEntryData->entry_by = auth()->user()->id;
+                    $journalEntryData->amount = $due;
+                    $journalEntryData->save();
+
+
+                    $creditEntry = new BsAccount();
+                    $creditEntry->purchase_id = $purchase->id;
+                    $creditEntry->journal_entry_id = $journalEntryData->id;
+                    $creditEntry->account_type = $bsSubTypeOne->type;
+                    $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                    $creditEntry->description = "Added " . $due . " Tk for this purchase due.";
+                    $creditEntry->credit = $due;
+                    $creditEntry->debit = 0;
+                    $creditEntry->save();
+                }
+                // == ===== == BS Account End ==>
+
+
+            }
+        }
+
+        if (!empty($productIdArr)) {
+            if ($id > 0) {
+                $exist_purchase_item = PurchaseItem::wherePurchaseId($id)->get();
+                foreach ($exist_purchase_item as $singleItem) {
+                    $singleItem->delete();
+                }
+            }
+
+            if ($id > 0) {
+                $existing_batch_id = PurchaseBatch::wherePurchaseId($id)->first();
+                $existing_stocks = Stock::where('purchase_batch_id', $existing_batch_id->id)->get();
+                foreach ($existing_stocks as $singleStock) {
+                    $singleStock->delete();
+                }
+            }
+
+            foreach ($productIdArr as $key => $product_id) {
+                $product = Product::find($product_id);
+                $purchase_item = new PurchaseItem();
+                $purchase_item->purchase_id  = $purchase->id;
+                $purchase_item->product_id = $product->id;
+                $purchase_item->price = $prductUnitPrice[$key];
+                $purchase_item->qty = $qtyArr[$key];
+                $purchase_item->supplier_name = $purchase->supplier->name;
+                $purchase_item->total_amount = $priceArr[$key];
+                $purchase_item->update_by = auth()->user()->id;
+                $purchase_item->save();
+
+                if ($id > 0) {
+                    $getBatch = PurchaseBatch::wherePurchaseId($id)->first();
+                }
+
+                $singleProduct = [
+                    'originalPrice' => $purchase_item->price * $purchase_item->qty,
+                    'quantity' => $purchase_item->qty
+                ];
+
+                $averagePrice = $this->calculateAveragePrice($request->calculatedPrice, $singleProduct, $originalAmount);
+
+                $purchase_item->avg_purchase_price = $averagePrice;
+                $purchase_item->save();
+
+                $newStock = new Stock();
+                $newStock->purchase_id = $purchase->id;
+                $newStock->purchase_batch_id = isset($getBatch) ? $getBatch->id : $batch->id;
+                $newStock->product_id = $product->id;
+                $newStock->product_name = $product->name;
+                $newStock->avg_purchase_price = $averagePrice;
+                $newStock->purchase_qty = $purchase_item->qty;
+                $newStock->total_purchase_price = $newStock->avg_purchase_price * $newStock->purchase_qty;
+                $newStock->stock += $purchase_item->qty;
+                $newStock->save();
+
+                $existingItemStock = StockItem::whereProductId($product->id)->first();
+                if (isset($existingItemStock)) {
+                    $itemStock = StockItem::whereProductId($product->id)->first();
+                    $itemStock->total_purchase_qty += $newStock->purchase_qty;
+                    $itemStock->stock += $purchase_item->qty;
+                } else {
+                    $itemStock = new StockItem();
+                    $itemStock->total_purchase_qty = $purchase_item->qty;
+                    $itemStock->stock = $purchase_item->qty;
+                }
+
+                $itemStock->product_id = $product->id;
+                $itemStock->product_name = $product->name;
+                $itemStock->save();
+            }
+        }
+
+        $accArr = [
+            'purchase_id'       => $purchase->id,
+            'type'              => 1,
+            'amount'            => $request->calculatedPrice,
+            'description'       => "Purchase(" . $purchase->batch->batch_code  . ") Products Form Supplier " . $purchase->supplier->name . ($due ? ' with a due of ' . $due . ' Tk' : ''),
+            'supplier_id'       => $purchase->supplier_id,
+        ];
+
+        updateAcc($accArr, 'purchase_id', $id, 1);
+
+        if ($request->balance > 0 && $id == 0) {
+
+            $accArr = [
+                'purchase_id'       => $purchase->id,
+                'type'              => 14,
+                'debit'             => $request->balance,
+                'description'       => "Paid " . showAmount($request->balance) . " Tk to Supplier " . $purchase->supplier->name .  " for Purchase (" . $purchase->batch->batch_code  . ").",
+                'supplier_id'       => $purchase->supplier_id,
+                'payment_method'    => $request->payment_method,
+            ];
+
+            $account = updateAcc($accArr, 'NTR', $id, 14);
+
+            if ($request->payment_method == 2) {
+
+                $bankTrArr = [
+                    'account_id'       => $account->id,
+                    'withdrawer_name'  => $request->withdrawer_name,
+                    'debit'            => $request->balance,
+                    'description'      => 'Company give payment to Supplier ' . $purchase->supplier->name . ' And Purchase Batch is ' . $purchase->batch->batch_code,
+                    'bank_id'          => $request->bank_id,
+                    'check_no'         => $request->check_no,
+                ];
+
+                bankTr($account, $bankTrArr);
+            }
+        }
+
+        $notify[] = ['success', $message];
+        return to_route('purchase.index')->withNotify($notify);
+    }
+
+    function calculateAveragePrice($totalAmount, $product, $totalOriginalPrice)
+    {
+        $productProportion = $product['originalPrice'] / $totalOriginalPrice;
+        $adjustedPrice = $totalAmount * $productProportion;
+        $averagePrice = $adjustedPrice / $product['quantity'];
+        return $averagePrice;
+    }
+
+    public function delete($id)
+    {
+        $purchase = Purchase::find($id);
+        $purchase->is_deleted = 1;
+        $purchase->save();
+
+        $notify[] = ['success', 'Purchase has been successfully deleted'];
+        return back()->withNotify($notify);
+    }
+}

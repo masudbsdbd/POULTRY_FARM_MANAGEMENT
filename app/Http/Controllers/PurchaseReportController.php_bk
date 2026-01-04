@@ -1,0 +1,140 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+use App\Models\Purchase;
+use App\Models\Damage;
+use App\Models\SupplierReturnItem;
+use App\Models\CustomerReturnItems;
+use App\Models\stock;
+use App\Models\Supplier;
+
+
+class PurchaseReportController extends Controller
+{
+    //
+    public function index(Request $request)
+    {
+
+        $searchCondition = [];
+        $supplier_id = null;
+
+        if (!empty($request->start_date)) {
+            $searchCondition['start_date'] = $request->start_date;
+        }
+        if (!empty($request->end_date)) {
+            $searchCondition['end_date'] = $request->end_date;
+        }
+        if (!empty($request->supplier_id)) {
+            $supplier_id = $request->supplier_id;
+            // dd($supplier_id);
+        }
+
+
+        $pageTitle = 'Purchase Report';
+
+        $todayTime = Carbon::now()->format('d-m-Y');
+        $purchases = Purchase::with([
+            'batch',
+            'supplier',
+            'items.product',
+            'items' => function ($query) {
+                $query->select('purchase_items.*')
+
+                    ->addSelect([
+                        'damage_qty' => Damage::query()
+                            ->selectRaw('SUM(qty)')
+                            ->whereColumn('damages.product_id', 'purchase_items.product_id')
+                            ->whereColumn('damages.purchase_id', 'purchase_items.purchase_id')
+                    ])
+
+                    ->addSelect([
+                        'return_qty' => SupplierReturnItem::query()
+                            ->selectRaw('SUM(return_qty)')
+                            ->whereColumn('supplier_return_items.purchase_id', 'purchase_items.purchase_id')
+                            ->whereColumn('supplier_return_items.product_id', 'purchase_items.product_id')
+                    ])
+                    ->addSelect([
+                        'customer_return_qty' => CustomerReturnItems::query()
+                            ->selectRaw('SUM(return_qty)')
+                            ->whereColumn('customer_return_items.purchase_id', 'purchase_items.purchase_id')
+                            ->whereColumn('customer_return_items.product_id', 'purchase_items.product_id')
+                    ])
+                    ->addSelect([
+                        'stock' => stock::query()
+                            ->selectRaw('SUM(stock)')
+                            ->whereColumn('stocks.purchase_id', 'purchase_items.purchase_id')
+                            ->whereColumn('stocks.product_id', 'purchase_items.product_id')
+                    ])
+                    ->addSelect([
+                        'avg_purchase_price' => Stock::query()
+                            ->selectRaw('SUM(avg_purchase_price)')
+                            ->whereColumn('stocks.purchase_id', 'purchase_items.purchase_id')
+                            ->whereColumn('stocks.product_id', 'purchase_items.product_id')
+                    ]);
+            }
+
+        ])
+            ->get();
+
+        if (!empty($searchCondition['start_date']) && !empty($searchCondition['end_date'])) {
+
+            $endDate = \Carbon\Carbon::parse($searchCondition['end_date'])->endOfDay();
+            $purchases = Purchase::whereBetween('purchase_date', [
+                $searchCondition['start_date'],
+                $endDate
+            ])
+                ->with([
+                    'batch',
+                    'supplier',
+                    'items.product',
+                    'items' => function ($query) {
+                        $query->select('purchase_items.*')
+
+                            ->addSelect([
+                                'damage_qty' => Damage::query()
+                                    ->selectRaw('SUM(qty)')
+                                    ->whereColumn('damages.product_id', 'purchase_items.product_id')
+                                    ->whereColumn('damages.purchase_id', 'purchase_items.purchase_id')
+                            ])
+
+                            ->addSelect([
+                                'return_qty' => SupplierReturnItem::query()
+                                    ->selectRaw('SUM(return_qty)')
+                                    ->whereColumn('supplier_return_items.purchase_id', 'purchase_items.purchase_id')
+                                    ->whereColumn('supplier_return_items.product_id', 'purchase_items.product_id')
+                            ])
+                            ->addSelect([
+                                'customer_return_qty' => CustomerReturnItems::query()
+                                    ->selectRaw('SUM(return_qty)')
+                                    ->whereColumn('customer_return_items.purchase_id', 'purchase_items.purchase_id')
+                                    ->whereColumn('customer_return_items.product_id', 'purchase_items.product_id')
+                            ])
+                            ->addSelect([
+                                'stock' => stock::query()
+                                    ->selectRaw('SUM(stock)')
+                                    ->whereColumn('stocks.purchase_id', 'purchase_items.purchase_id')
+                                    ->whereColumn('stocks.product_id', 'purchase_items.product_id')
+                            ])
+                            ->addSelect([
+                                'avg_purchase_price' => Stock::query()
+                                    ->selectRaw('SUM(avg_purchase_price)')
+                                    ->whereColumn('stocks.purchase_id', 'purchase_items.purchase_id')
+                                    ->whereColumn('stocks.product_id', 'purchase_items.product_id')
+                            ]);
+                    }
+
+                ])
+                ->get();
+        }
+        if (!empty($supplier_id)) {
+            $purchases = $purchases->where('supplier_id', $supplier_id);
+        }
+        $suppliers = Supplier::latest()->notDeleted()->get();
+        // dd($suppliers);
+
+        return view('purchase-report.index', compact('pageTitle', 'todayTime', 'purchases', 'suppliers'));
+    }
+}

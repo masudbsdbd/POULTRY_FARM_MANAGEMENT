@@ -1,0 +1,269 @@
+@extends('layouts.vertical', ['title' => 'Datatables'])
+
+@section('css')
+@vite(['node_modules/flatpickr/dist/flatpickr.min.css', 'node_modules/select2/dist/css/select2.min.css'])
+@endsection
+
+@section('content')
+<!-- Start Content-->
+<div class="container-fluid">
+
+    @include('layouts.shared.page-title', ['title' => $pageTitle, 'subtitle' => $pageTitle])
+
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card-body">
+                <div class="row">
+                    @foreach($products as $key => $item)
+                    <div class="col-md-2 col-sm-4 mb-3">
+                        <!-- Button for each product -->
+                        <button id="product-{{ $item->id }}" type="button"
+                            class="btn-prni btn-default product pos-tip"
+                            data-container="body"
+                            data-original-title="{{ $item->name }}"
+                            title="{{ $item->name }}"
+                            style="padding: 5px; width: 100%; background-color: white; border: none; box-shadow: none;"
+                            data-product="{{ $item->id }}"
+                            data-name="{{ $item->name }}"
+                            data-price="{{ $item->price }}"
+                            data-image="{{ asset($item->image) }}"
+                            data-stocks="{{ json_encode($item->stocks->map(function($stock) { 
+                                return [
+                                    'batch_code' => $stock->purchaseBatch->batch_code, 
+                                    'stock' => $stock->stock, 
+                                    'batch_id' => $stock->purchaseBatch->id,
+                                    'avg_purchase_price' => $stock->avg_purchase_price ?: 0
+                                ]; 
+                            })->toArray()) }}">
+                            <!-- Image -->
+                            <img src="{{ asset('uploads/products/' . $item->image) }}" alt="{{ $item->name }}" class="img-rounded"
+                                style="width: 100%; height: 120px; object-fit: cover; padding-bottom: 5px;">
+                            <!-- Product Name -->
+                            <span style="font-size: 14px;">{{ $item->name }}</span>
+                        </button>
+                    </div>
+                    @endforeach
+                </div>
+            </div>
+        </div><!-- end col -->
+    </div>
+    <!-- end row -->
+
+</div> <!-- container -->
+@endsection
+
+@section('script')
+@vite(['resources/js/pages/form-advanced.init.js', 'resources/js/pages/form-pickers.init.js'])
+
+<script>
+    $(document).ready(function() {
+        const entriesContainer = $('#entries-container');
+        const footerItems = $('#footer-items');
+        const footerTotal = $('#total');
+
+        // Click event for product button
+        // Click event for product button
+        $('.product').on('click', function() {
+            const product = {
+                id: $(this).data('product'),
+                name: $(this).data('name'),
+                price: parseFloat($(this).data('price')),
+                stocks: $(this).data('stocks')
+            };
+
+            // Check if the product already exists in the table to avoid duplicates
+            let exists = false;
+            $('#entries-container tr').each(function() {
+                if ($(this).find('.entry-text').text() === product.name) {
+                    exists = true;
+                }
+            });
+
+            if (exists) {
+                alert("Product already added to the table!");
+                return;
+            }
+
+            // Add new product row if not already added
+            addNewProductRow(product);
+        });
+
+
+        // Function to add a new product row with the selected batch
+        function addNewProductRow(product, selectedBatchId = null) {
+
+            const entryRow = $('<tr></tr>').attr('data-product-id', product.id).attr('data-batch-id', selectedBatchId || '');
+            const entryTextCell = $('<td></td>').addClass('entry-text').text(product.name);
+
+            // const entryTextCell2 = $('<td></td>').addClass('entry-text-2').text(product.price);
+
+            const entryTextCell2 = $('<td></td>').addClass('entry-text-2');
+            const priceInput = $('<input>')
+                .attr({
+                    type: 'number',
+                    min: 0
+                })
+                .addClass('form-control form-control-sm')
+                .val(parseFloat(product.price).toFixed(0));
+
+            entryTextCell2.append(priceInput);
+
+            const entryId = $('<td></td>').addClass('entry-id').text(product.id).attr('hidden', true);
+            const entryDate = $('<td></td>')
+                .addClass('entry-date')
+                .text(new Date().toLocaleString()).attr('hidden', true);
+
+                // =======================
+                // =======================
+                let avgPurchasePrice = 0;
+                if (selectedBatchId) {
+                    const selectedBatch = product.stocks.find(stock => stock.batch_id == selectedBatchId);
+                    avgPurchasePrice = selectedBatch ? parseFloat(selectedBatch.avg_purchase_price) : 0;
+                } else {
+                    const firstBatch = product.stocks[0];
+                    avgPurchasePrice = firstBatch ? parseFloat(firstBatch.avg_purchase_price) : 0;
+                }
+                const avgPurchasePriceCell = $('<td></td>').addClass('avg-purchase-price-sell').text(avgPurchasePrice.toFixed(2)).attr('hidden', true);
+                // =======================
+
+
+            // Batch selection
+            const batchSelectCell = $('<td></td>').addClass('batch-cell');
+            const batchSelect = $('<select></select>')
+                .addClass('form-control form-control-sm')
+                .data('current-batch-id', selectedBatchId || (product.stocks[0]?.batch_id || '')).css('width', '130px');
+
+            product.stocks.forEach(function(stock) {
+                const batchOption = $('<option></option>')
+                    .val(stock.batch_id)
+                    .text(`${stock.batch_code} - Stock: ${stock.stock}`);
+
+                if (selectedBatchId && selectedBatchId == stock.batch_id) {
+                    batchOption.prop('selected', true);
+                }
+
+                batchSelect.append(batchOption);
+            });
+
+            // ==================
+            batchSelectCell.append(batchSelect);
+
+            // Quantity input
+            const qtyCell = $('<td></td>').addClass('qty-cell');
+            const qtyInput = $('<input>').attr('type', 'number').addClass('form-control form-control-sm').val(0).attr('min', 1);
+            qtyCell.append(qtyInput);
+
+            // Subtotal cell
+            const subtotalCell = $('<td></td>').addClass('subtotal-cell').text('0.00');
+
+            entryRow.append(entryTextCell);
+            entryRow.append(entryTextCell2);
+            entryRow.append(entryId);
+            entryRow.append(batchSelectCell);
+            entryRow.append(qtyCell);
+            entryRow.append(subtotalCell);
+            entryRow.append(entryDate);
+            entryRow.append(avgPurchasePriceCell);
+
+            // Clear button
+            const clearButtonCell = $('<td></td>');
+            const clearButton = $('<button></button>')
+                .addClass('btn btn-danger btn-sm')
+                .text('X')
+                .on('click', function() {
+                    entryRow.remove();
+                    updateFooter();
+                });
+            clearButtonCell.append(clearButton);
+            entryRow.append(clearButtonCell);
+
+            entriesContainer.append(entryRow);
+
+            // Quantity input change handler
+            qtyInput.on('input', function() {
+                const qtyValue = qtyInput.val();
+                const selectedBatchId = batchSelect.val();
+                const selectedBatch = product.stocks.find(stock => stock.batch_id == selectedBatchId);
+                const availableStock = selectedBatch ? selectedBatch.stock : 0;
+
+                if (qtyValue > availableStock) {
+                    alert('Out of stock!');
+                    qtyInput.val(0);
+                    // qtyInput.val(availableStock);
+                    return;
+                }
+
+                const price = parseFloat(priceInput.val());
+                // console.log(price);
+                updateSubtotal(entryRow, price, qtyInput.val());
+                // updateSubtotal(entryRow, product.price, qtyInput.val());
+            });
+            
+
+            // Price input handler (new)
+            priceInput.on('input', function() {
+            const price = parseFloat(priceInput.val()) || 0;
+            const qty = parseFloat(qtyInput.val()) || 0;
+            updateSubtotal(entryRow, price, qty);
+            });
+
+
+            // Batch change handler
+            batchSelect.on('change', function() {
+                const newBatchId = $(this).val();
+                const currentBatchId = $(this).data('current-batch-id');
+
+                const productId = $(this).closest('tr').find('.entry-id').text();
+
+                let isDuplicateBatch = false;
+                let count = 0;
+                $('#entries-container tr').each(function() {
+                    const rowProductId = $(this).find('.entry-id').text();
+                    const rowBatchId = $(this).find('.batch-cell select').val();
+
+                    if (rowProductId == productId && rowBatchId == newBatchId) {
+                        isDuplicateBatch = true;
+                        count++;
+                    }
+                });
+
+                if (count <= 1) {
+                    if (newBatchId !== currentBatchId) {
+                        addNewProductRow(product, newBatchId);
+                        $(this).val(currentBatchId);
+                    }
+                    updateFooter();
+                } else {
+                    alert("Already selected this product with the same batch!");
+                    $(this).val(currentBatchId);
+                }
+            });
+
+            updateFooter();
+        }
+
+        function updateSubtotal(row, price, qty) {
+            const subtotalCell = row.find('.subtotal-cell');
+            const subtotal = price * qty;
+            subtotalCell.text(subtotal.toFixed(2));
+            updateFooter();
+        }
+
+        // Update the footer with item count and total
+        function updateFooter() {
+            let totalQty = 0;
+            let totalAmount = 0;
+            $('#entries-container .qty-cell input').each(function() {
+                const qty = parseInt($(this).val()) || 0;
+                // const price = parseFloat($(this).closest('tr').find('.entry-text-2').text()) || 0;
+                const price = parseFloat($(this).closest('tr').find('.entry-text-2 input').val()) || 0;
+                totalQty += qty;
+                totalAmount += price * qty;
+            });
+
+            footerItems.text(totalQty);
+            footerTotal.text(totalAmount.toFixed(2));
+        }
+    });
+</script>
+@endsection

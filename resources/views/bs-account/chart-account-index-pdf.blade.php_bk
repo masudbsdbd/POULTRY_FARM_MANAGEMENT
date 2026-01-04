@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balance Sheet</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 80%;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 34px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+        }
+
+        h2 {
+            font-size: 20px;
+            color: #444;
+            font-weight: 600;
+            margin-top: 30px;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 5px;
+        }
+
+        .date-range {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 16px;
+            color: #777;
+        }
+
+        .date-box {
+            border: 1px dashed #ccc;
+            padding: 6px 20px;
+            border-radius: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        th {
+            background-color: #f8f8f8;
+            color: #555;
+        }
+
+        tr:nth-child(even) {
+            background-color: #fafafa;
+        }
+
+        .total {
+            font-weight: 700;
+            background-color: #f9f9f9;
+        }
+
+        .total td {
+            font-size: 12px; /* Smaller font size for the totals */
+            color: #333;
+        }
+
+        .total td:last-child {
+            font-size: 10px; /* Even smaller font size for the totals */
+            color: #007BFF;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            font-size: 14px;
+            color: #777;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            h2 {
+                font-size: 18px;
+            }
+
+            .date-range {
+                font-size: 14px;
+            }
+
+            th,
+            td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Balance Sheet</h1>
+
+        <div class="date-range">
+            <span class="date-box">Date: {{ date('Y-m-d') }}</span>
+        </div>
+
+        <h2>Assets:</h2>
+        <table>
+            <tr>
+                <th>Description</th>
+                <th>Amount (Tk)</th>
+            </tr>
+            <tr>
+                <td>Fixed Asset</td>
+                <td>{{ $totalAssets }}</td>
+            </tr>
+            <tr>
+                <td>Cash</td>
+                <td>{{ $currentCashAmount }}</td>
+            </tr>
+            <tr>
+                <td>Bank</td>
+                <td>{{ $currentBankAmount }}</td>
+            </tr>
+            <tr>
+                <td>Receivable Amount</td>
+                <td>{{ $totalReceivableAmount }}</td>
+            </tr>
+            <tr>
+                <td>Inventory</td>
+                <td>{{ $totalPurchaseStock }}</td>
+            </tr>
+            <tr class="total">
+                <td><strong>Total Assets</strong></td>
+                <td><strong>{{ $totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock }}</strong></td>
+            </tr>
+        </table>
+
+        <h2>Liabilities:</h2>
+        <table>
+            <tr>
+                <th>Description</th>
+                <th>Amount (Tk)</th>
+            </tr>
+            <tr>
+                <td>Payable Amount</td>
+                <td>{{ $totalPayableAmount - $employeePayableSalary }}</td>
+            </tr>
+            <tr>
+                <td>Employee Salary</td>
+                <td>{{ $employeePayableSalary }}</td>
+            </tr>
+        </table>
+
+        <h2>Equity:</h2>
+        <table>
+            <tr>
+                <th>Description</th>
+                <th>Amount (Tk)</th>
+            </tr>
+            <tr>
+                <td>Owner's Capital</td>
+                <td>{{ $totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock - $totalPayableAmount - $incomes }}</td>
+            </tr>
+            <tr>
+                <td>Other's Income</td>
+                <td>{{ $incomes }}</td>
+            </tr>
+            <tr class="total">
+                <td><strong>Total Liabilities + Equity</strong></td>
+                <td><strong>{{ $totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock - $totalPayableAmount + $totalPayableAmount }}</strong></td>
+            </tr>
+        </table>
+{{-- 
+        <div class="footer">
+            <p>Balance Sheet Generated by Your Company Name</p>
+        </div> --}}
+    </div>
+
+</body>
+
+</html>

@@ -1,0 +1,240 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\PurchaseBatch;
+use Illuminate\Http\Request;
+use App\Models\Supplier;
+use App\Models\SupplierReturn;
+use App\Models\SupplierReturnItem;
+use App\Models\Product;
+use App\Models\Stock;
+use App\Models\StockItem;
+
+class SupplierReturnController extends Controller
+{
+    public function index()
+    {
+        $pageTitle = 'All Return to Supplier';
+        $supplierReturns = SupplierReturn::latest()->with(['supplier', 'purchaseBatch'])->notDeleted()->paginate(20);
+        return view('supplier-return.index', compact('pageTitle', 'supplierReturns'));
+    }
+    public function create()
+    {
+        $pageTitle = 'Create Return to Supplier';
+        $suppliers = Supplier::all();
+        return view('supplier-return.create', compact('pageTitle', 'suppliers'));
+    }
+
+    public function edit($id)
+    {
+        $pageTitle = 'Edit Purchase Return';
+        $supplierReturnData = SupplierReturn::find($id);
+        $suppliers = Supplier::whereStatus(1)->notDeleted()->latest()->get();
+
+        $supplierId = $supplierReturnData->supplier_id;
+        $purchaseBatches = PurchaseBatch::where('supplier_id', $supplierId)->get();
+        foreach ($purchaseBatches as $purchaseBatch) {
+            $purchaseItems = [];
+
+            foreach ($purchaseBatch->purchase->items as $item) {
+                $stock = $purchaseBatch->stock->where('purchase_batch_id', $purchaseBatch->id)
+                    ->where('product_id', $item->product_id)
+                    ->first();
+
+                $quantity = $stock ? $stock->stock : 0;
+
+                $purchaseItems[] = [
+                    'id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product->name ?? 'N/A',
+                    'quantity' => $quantity,
+                    'price' => $item->avg_purchase_price,
+                    'purchase_id' => $item->purchase_id,
+                ];
+            }
+
+            $purchaseBatch->purchase_items = $purchaseItems;
+        }
+
+        $supplierReturnItemsData = SupplierReturnItem::where('supplier_return_id', $id)->get();
+        $supplierReturnItemsProducts = $supplierReturnItemsData->pluck('product_id');
+        $purchaseBatchId = $supplierReturnData->purchase_batch_id;
+
+        $products = [];
+
+        $productRecords = Product::whereIn('id', $supplierReturnItemsProducts)
+            ->with(['stocks' => function ($query) use ($purchaseBatchId) {
+                $query->where('purchase_batch_id', $purchaseBatchId);
+            }])->get();
+
+        foreach ($productRecords as $product) {
+            $supplierReturnItem = $supplierReturnItemsData->firstWhere('product_id', $product->id);
+
+            $stock = $product->stocks->first();
+
+
+            $avg_price = Stock::where('purchase_id', $supplierReturnItem->purchase_id ?? null)
+                ->where('product_id', $product->id)
+                ->value('avg_purchase_price');
+
+            $products[] = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'price' => $avg_price,
+                'stock_qty' => $stock ? $stock->stock : 0,
+                'purchase_id' => $supplierReturnItem->purchase_id ?? null,
+            ];
+        }
+
+        return view('supplier-return.create', compact(
+            'supplierReturnData',
+            'pageTitle',
+            'purchaseBatches',
+            'supplierReturnItemsData',
+            'suppliers',
+            'products'
+        ));
+    }
+
+    public function returnAjax($id)
+    {
+        $purchaseBatchs = PurchaseBatch::where('supplier_id', $id)
+            ->with(['purchase', 'purchase.items.product', 'stock']) // Include stock relation
+            ->latest()
+            ->get();
+
+        $result = [];
+
+        foreach ($purchaseBatchs as $purchaseBatch) {
+            $purchaseItems = [];
+
+            foreach ($purchaseBatch->purchase->items as $item) {
+                $stock = $purchaseBatch->stock->where('purchase_batch_id', $purchaseBatch->id)
+                    ->where('product_id', $item->product_id)
+                    ->first();
+
+                $quantity = $stock ? $stock->stock : 0;
+
+                $purchaseItems[] = [
+                    'id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product->name ?? 'N/A',
+                    'quantity' => $quantity,
+                    'price' => $item->avg_purchase_price,
+                    'purchase_id' => $item->purchase_id,
+                ];
+            }
+
+            $result[] = [
+                'batch_id' => $purchaseBatch->id ?? null,
+                'batch_code' => $purchaseBatch->batch_code ?? null,
+                'purchase_items' => $purchaseItems,
+            ];
+        }
+        return $result;
+    }
+
+    public function store(Request $request, $id = 0)
+    {
+        $request->validate([
+            'products' => 'required',
+        ]);
+
+        $input = $request->all();
+        $supplierId = $input['supplier_id'];
+        $batchId = $input['batch_id'];
+        $totalQuantity = $input['totalQuantity'];
+        $calculatedPrice = $input['calculatedPrice'];
+        $products = $input['products'];
+        $purchaseIds = $input['purchase_ids'];
+        $quantities = $input['quantities'];
+        $prices = $input['prices'];
+
+
+        if ($id > 0) {
+            $data = SupplierReturn::whereId($id)->first();
+            $message = 'Supplier Return updated successfully';
+            $data->last_update       = now();
+            $data->update_by         = auth()->user()->id;
+
+            $supplierReturnItems = SupplierReturnItem::where('supplier_return_id', $id)->get()->toArray();
+            $purchaseBatchId = $data->purchase_batch_id;
+
+            foreach ($supplierReturnItems as $key =>  $items) {
+                $itemsQty = $items['return_qty'];
+                $itemsProductId = $items['product_id'];
+
+                $stock = Stock::where('purchase_batch_id', $purchaseBatchId)
+                    ->where('product_id', $itemsProductId)
+                    ->first();
+                $stock->stock += $itemsQty;
+                $stock->save();
+
+                $stockItems = StockItem::where('product_id', $itemsProductId)
+                    ->first();
+                $stockItems->stock += $itemsQty;
+                $stockItems->save();
+            }
+
+            $exist_supplier_return_items_records = SupplierReturnItem::where('supplier_return_id', $id)->get();
+            foreach ($exist_supplier_return_items_records as $singleItem) {
+                $singleItem->delete();
+            }
+        } else {
+            $data = new SupplierReturn();
+            $message            = 'New Supplier Return created successfully';
+        }
+
+        $data->supplier_id = $supplierId;
+        $data->purchase_batch_id = $batchId;
+        $data->total_qty = $totalQuantity;
+        $data->total_return_price = $calculatedPrice;
+        $data->entry_date = now();
+        $data->entry_by = auth()->user()->id;
+        $data->save();
+
+        $supplierReturnId = $data->id;
+
+        foreach ($products as $index => $productId) {
+            $productReturnItem = new SupplierReturnItem();
+            $productReturnItem->supplier_return_id = $supplierReturnId;
+            $productReturnItem->purchase_id = $purchaseIds[$index];
+            $productReturnItem->product_id = $productId;
+            $productReturnItem->return_qty = $quantities[$index];
+            $productReturnItem->avg_purchase_price = $prices[$index];
+            $productReturnItem->retun_product_price = $quantities[$index] * $prices[$index];
+            $productReturnItem->save();
+
+            $stock = Stock::where('purchase_batch_id', $batchId)
+                ->where('product_id', $productId)
+                ->first();
+
+            $stock->stock -= $quantities[$index];
+            $stock->save();
+
+
+            $stockItems = StockItem::where('product_id', $productId)
+                ->first();
+
+            $stockItems->stock -= $quantities[$index];
+            $stockItems->save();
+        }
+
+
+
+        $message = 'New Supplier return created successfully';
+        $notify[] = ['success', $message];
+        return to_route('supplier-return.index')->withNotify($notify);
+    }
+
+    public function delete($id)
+    {
+        $Supplier_return = SupplierReturn::find($id);
+        $Supplier_return->is_deleted = 1;
+        $Supplier_return->save();
+
+        $notify[] = ['success', 'Supplier return has been successfully deleted'];
+        return back()->withNotify($notify);
+    }
+}

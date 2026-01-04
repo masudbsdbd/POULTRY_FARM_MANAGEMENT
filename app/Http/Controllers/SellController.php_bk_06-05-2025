@@ -1,0 +1,705 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Account;
+use App\Models\Bank;
+use App\Models\BankTransaction;
+use Illuminate\Http\Request;
+
+use App\Models\Customer;
+use App\Models\Delivery;
+use App\Models\Product;
+use App\Models\Stock;
+use App\Models\StockItem;
+use App\Models\SellRecord;
+use App\Models\Sell;
+use Mpdf\Mpdf;
+use App\Models\BsType;
+use App\Models\BsAccount;
+use App\Models\JournalEntry;
+use App\Models\Payable;
+use App\Models\Receivable;
+use Carbon\Carbon;
+
+class SellController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('permission:sell-list', ['only' => ['index']]);
+        $this->middleware('permission:sell-create|sell-edit', ['only' => ['store']]);
+        $this->middleware('permission:sell-create', ['only' => ['create']]);
+        $this->middleware('permission:sell-edit', ['only' => ['edit']]);
+        $this->middleware('permission:sell-delete', ['only' => ['delete']]);
+        $this->middleware('permission:sell-payment', ['only' => ['payDue']]);
+        $this->middleware('permission:sell-delivery', ['only' => ['deliveryView', 'deliveryStatusChange']]);
+    }
+    // public function index()
+    // {
+    //     $pageTitle = 'All Sells';
+    //     $sells = Sell::with('sellRecords', 'sellRecords.product.unit')->latest()->notDeleted()->get();
+    //     $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+    //     return view('sell.index', compact('pageTitle', 'sells', 'banks'));
+    // }
+    public function index(Request $request)
+    {
+
+        $pageTitle = 'All Sells';
+        $customers = Customer::whereStatus(1)->notDeleted()->latest()->get();
+        $todayTime = Carbon::now()->format('d-m-Y');
+
+
+        $type = $request->type;
+        $date = $request->date;
+        $range = $request->range;
+        if ($range) {
+            $dates = explode(' to ', $range);
+            $givenDates = [
+                $dates[0] . ' 00:00:00',
+                $dates[1] . ' 23:59:59',
+            ];
+        }
+
+        $customer_id = $request->customer_id;
+
+        $sells = Sell::query();
+
+        if ($type) {
+            $givenDate = $type == 1 ? $date : $givenDates;
+            if (!isset($givenDate)) {
+                $notify[] = ['error', 'Kindly select date.'];
+                return back()->withNotify($notify);
+            }
+
+            $clause = $type == 1 ? 'whereDate' : 'whereBetween';
+            $sells = $sells->$clause('sell_date', $givenDate);
+        }
+
+
+
+        if ($customer_id) {
+            $sells = $sells->where('customer_id', $customer_id);
+        }               
+
+
+        $sells = $sells->with('sellRecords', 'sellRecords.product.unit')->notDeleted()->latest()->get();
+
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+        return view('sell.index', compact('pageTitle', 'sells', 'banks','customers'));
+    }
+
+    public function create()
+    {
+        $pageTitle = 'New Sell';
+        $customers = Customer::whereStatus(1)->notDeleted()->latest()->get();
+        $products = Product::whereStatus(1)->with('stockItem')->notDeleted()->latest()->get();
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+        return view('sell.create', compact('pageTitle', 'customers', 'products', 'banks'));
+    }
+
+    public function edit($id)
+    {
+        $pageTitle = 'Edit Sell';
+        $sell = Sell::find($id);
+        $customers = Customer::whereStatus(1)->notDeleted()->latest()->get();
+        $products = Product::whereStatus(1)->with('stockItem')->notDeleted()->latest()->get();
+        $sellRecords = SellRecord::where('sell_id', $id)->with(['purchaseBatch'])->get();
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+        // $advanceAccountRow = Account::whereSellId($sell->id)->whereIsAdvance(1)->first();
+
+        return view('sell.create', compact('sell', 'pageTitle', 'customers', 'products', 'sellRecords', 'banks'));
+    }
+
+    public function deliveryView($id)
+    {
+        $pageTitle = 'Sell Delivery';
+        $sell = Sell::find($id);
+        $customers = Customer::whereStatus(1)->notDeleted()->latest()->get();
+        $products = Product::whereStatus(1)->with('stockItem')->notDeleted()->latest()->get();
+        $sellRecords = SellRecord::where('sell_id', $id)->with(['purchaseBatch'])->get();
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+        return view('sell.delivery', compact('sell', 'pageTitle', 'customers', 'products', 'sellRecords', 'banks'));
+    }
+
+    public function deliveryStatusChange($id)
+    {
+        $sell = Sell::find($id);
+
+        if ($sell->delivery_status == 0) {
+            $sell->delivery_date = now();
+            $sell->delivery_status = 1;
+            $sell->save();
+
+            $delivery = new Delivery();
+            $delivery->sell_id = $sell->id;
+            $delivery->customer_id = $sell->customer_id;
+            $delivery->qty = $sell->total_qty;
+            $delivery->entry_by = auth()->user()->id;
+            $delivery->save();
+        } else {
+            $sell->delivery_status = 0;
+            $sell->save();
+
+            $delivery = Delivery::whereSellId($id)->first();
+            $delivery->delete();
+        }
+
+        $notify[] = ['success', 'Products delivered successfully.'];
+        return back()->withNotify($notify);
+    }
+
+    public function generatePdf($id)
+    
+    {
+        $mpdf = setPdf();
+        $sell = Sell::whereId($id)->first();
+        $html = view('sell.sell-invoice', compact('sell'))->render();
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('sell-invoice' . $sell->id . '.pdf', 'I'))->header('Content-Type', 'application/pdf');
+    }
+
+    public function payDue(Request $request, $id)
+    {
+        $sell = Sell::whereId($id)->first();
+
+        // dd($sell->toArray());
+
+        if ($request->balance > $sell->due_to_company) {
+            $notify[] = ['error', 'The due amount entered is incorrect. Please verify and try again.'];
+            return back()->withNotify($notify);
+        }
+
+        $sell->due_to_company -= $request->balance;
+        $sell->payment_received += $request->balance;
+        $sell->save();
+
+        // // // == ===== == Receivable Account Start ==>
+        $receivableData = Receivable::where('sell_id', $id)->where('customer_id', $sell->customer_id)->first();
+        if ($receivableData) {
+            $receivableData->receivable_amount -= $request->balance;
+            $receivableData->save();
+        }
+        // // // == ===== == Receivable Account End ==>
+
+
+
+        $accArr = [
+            'sell_id'           => $sell->id,
+            'type'              => 7,
+            'credit'            => $request->balance,
+            'description'       => $request->comment ? $request->comment : "Due Payment received of " . $request->balance . " Tk from the customer " . $sell->customer->name . " for previous sell"  . ". Sell invoice (" . $sell->invoice_no . ").",
+            'customer_id'       => $sell->customer_id,
+            'payment_method'    => $request->payment_method,
+        ];
+
+        $account = updateAcc($accArr, 'NTR', $sell->id, 7);
+
+        if ($request->payment_method == 2) {
+
+            $bankTrArr = [
+                'account_id'       => $account->id,
+                'depositor_name'   => $request->depositor_name,
+                'credit'           => $request->balance,
+                'description'      => 'Company received due payment from customer ' . $sell->customer->name,
+                'bank_id'          => $request->bank_id,
+                'check_no'         => $request->check_no,
+            ];
+
+            bankTr($account, $bankTrArr);
+        }
+
+        $notify[] = ['success', 'Due payment has been received successfully.'];
+        return back()->withNotify($notify);
+    }
+
+    public function batchAjax($id)
+    {
+        $stocks = Stock::whereProductId($id)->with('batch', 'batch.purchase', 'batch.purchase.items')->get();
+        return response()->json($stocks);
+    }
+
+    public function store(Request $request, $id = 0)
+    {
+        // return $request;
+        // dd($request->all());
+        $request->validate([
+            'customer_id'       => 'required',
+            'sell_date'         => 'required',
+            'products'          => 'required',
+            'batch_id'          => 'required',
+            'qty'               => 'required',
+            'priceTotal'        => 'required',
+            'totalQuantity'     => 'required',
+            'calculatedPrice'   => 'required',
+            'sell_price'        => 'required',
+        ]);
+
+        if ($id == 0) {
+            $request->validate([
+                'payment_method'    => 'required',
+            ]);
+        }
+
+        $bank = Bank::whereId($request->bank_id)->first();
+        if (isset($bank) && $request->balance > $bank->balance && $id == 0) {
+            $notify[] = ['error', 'Insufficient balance in ' . $bank->bank_name];
+            return back()->withNotify($notify);
+        }
+
+        $productsArr = $request->products;
+        $qtyArr = $request->qty;
+        $batchIdArr = $request->batch_id;
+        $sellPriceArr = $request->sell_price;
+        $priceTotalArr = $request->priceTotal;
+        $avgpurchasepriceArr = $request->avg_purchase_price;
+
+        $discountsArr = array_map(function ($value) {
+            return $value === null ? 0 : $value;
+        }, $request->discounts);
+
+        if ($id > 0) {
+
+            $sell = Sell::whereId($id)->first();
+            $message = 'Sell updated successfully';
+            $sell->last_update       = now();
+            $sell->update_by         = auth()->user()->id;
+            $prviousSellPaymentReceived = $sell->payment_received;
+            $previousStoredCustomer = $sell->customer_id;
+
+            $sell_records = SellRecord::where('sell_id', $id)->get();
+
+            foreach ($sell_records as $item) {
+                $stock_item = StockItem::where('product_id', $item->product_id)->first();
+                if ($stock_item) {
+                    $stock_item->stock += $item->sell_qty;
+                    $stock_item->total_sell_qty -= $item->sell_qty;
+                    $stock_item->save();
+                }
+
+                $stock = Stock::where('purchase_batch_id', $item->purchase_batch_id)->where('product_id', $item->product_id)->first();
+                if ($stock) {
+                    $stock->stock += $item->sell_qty;
+                    $stock->save();
+                }
+            }
+
+            // // == ===== == Receivable Account Start ==>
+            $receivableData = Receivable::where('sell_id', $id)->first();
+
+            if ($receivableData) {
+                $receivableData->delete();
+            }
+            // // == ===== == Receivable Account End ==>
+
+
+
+        } else {
+            $sell = new Sell();
+            $message = 'New Sell created successfully';
+        }
+
+        $totalPurchasedPrice = 0;
+        foreach ($avgpurchasepriceArr as $key => $singleAvgPrice) {
+            $totalPurchasedPrice += $singleAvgPrice * $qtyArr[$key];
+        }
+
+        // dd($totalPurchasedPrice);
+
+        $due = $request->calculatedPrice == $request->balance ? 0 : ($request->calculatedPrice - $request->balance);
+
+        $sell->customer_id       = $request->customer_id;
+        $sell->sell_date         = $request->purchase_date;
+        $sell->total_price       = $request->calculatedPrice;
+        $sell->profit            = $request->calculatedPrice - $totalPurchasedPrice;
+        $sell->total_qty         = $request->totalQuantity;
+        $sell->payment_received  = $id == 0 ? $request->balance : $sell->payment_received;
+        $sell->due_to_company    = $due;
+        $sell->discount          = $request->discount ?? 0;
+        $sell->entry_by          = auth()->user()->id;
+        $sell->entry_date        = now();
+        $sell->save();
+
+        $sell->invoice_no        = "sell-invoice-" . $sell->id;
+        $sell->save();
+
+
+        // // == ===== == Receivable Account Start ==>
+        // if ($id == 0) {
+        if ($due > 0) {
+            // dd($due);
+            $receivableData = new Receivable();
+            $receivableData->sell_id = $sell->id;
+            $receivableData->customer_id = $request->customer_id;
+            $receivableData->receivable_head_id = 1;
+            $receivableData->invoice_no = $sell->invoice_no;
+            $receivableData->receivable_amount = $due;
+            $receivableData->save();
+        }
+        // }
+        // // == ===== == Receivable Account End ==>
+
+
+
+        $findCustomer = Customer::whereid($request->customer_id)->first();
+
+        if ($id > 0) {
+            $previousGiven = $sell->advance;
+            // dd($previousGiven);
+
+            // ///////////////////////////////////////////////////////////////////////////
+            $advanceAmount = $prviousSellPaymentReceived - $request->calculatedPrice;
+            $previousAdvanceAmount = $sell->sell_revision_advance;
+
+            $bsSubTypeOne = BsType::find(9);
+            $existingBS = BsAccount::where('sell_id', $sell->id)->where('account_type', 2)->where('account_sub_type', 9)->orderBy('id', 'desc')->first();
+
+            if ($prviousSellPaymentReceived > $request->calculatedPrice) {
+
+                $sell->sell_revision_advance = $advanceAmount;
+                $sell->save();
+
+                $findCustomer->advance -= $previousAdvanceAmount;
+                $findCustomer->save();
+
+                $findCustomer->advance += $advanceAmount;
+                $findCustomer->save();
+
+                // // // == ===== == Payable Account Start ==>
+                $payableData = Payable::where('customer_id', $request->customer_id)->where('payables_head_id', 2)->first();
+                if ($payableData) {
+                    $payableData->payable_amount -= $previousAdvanceAmount;
+                    $payableData->payable_amount += $advanceAmount;
+                    $payableData->save();
+                }
+                // // // == ===== == Payable Account End ==>
+            } else {
+                $sell->sell_revision_advance = 0;
+                $sell->save();
+
+                $findCustomer->advance -= $previousAdvanceAmount;
+                $findCustomer->save();
+
+                if (isset($existingBS)) {
+                    $existingBS->delete();
+                }
+
+                // // // == ===== == Payable Account Start ==>
+                $payableData = Payable::where('customer_id', $request->customer_id)->where('payables_head_id', 2)->first();
+                if ($payableData) {
+                    $payableData->payable_amount -= $previousAdvanceAmount;
+                    $payableData->save();
+                }
+                // // // == ===== == Payable Account End ==>
+            }
+
+            // ///////////////////////////////////////////////////////////////////////////
+
+            if (isset($sell->advance)) {
+                if ($prviousSellPaymentReceived > $request->calculatedPrice) {
+
+                    // /////////////////////////////
+                } else {
+                    if ($findCustomer->id == $previousStoredCustomer) {
+                        $findCustomer->advance += $previousGiven;
+                        $findCustomer->save();
+
+                        // // // == ===== == Payable Account Start ==>
+                        $payableData = Payable::where('customer_id', $findCustomer->id)->where('payables_head_id', 2)->first();
+                        if ($payableData) {
+                            $payableData->payable_amount += $previousGiven;
+                            $payableData->save();
+                        }
+                        // // // == ===== == Payable Account End ==>
+
+
+                    } else {
+                        $previousCustomer = Customer::whereid($previousStoredCustomer)->first();
+                        $previousCustomer->advance += $previousGiven;
+                        $previousCustomer->save();
+
+                        // // // == ===== == Payable Account Start ==>
+                        $payableData = Payable::where('customer_id', $previousCustomer->id)->where('payables_head_id', 2)->first();
+                        if ($payableData) {
+                            $payableData->payable_amount += $previousGiven;
+                            $payableData->save();
+                        }
+                        // // // == ===== == Payable Account End ==>
+                    }
+                }
+            }
+        }
+
+        $getAdvance = $findCustomer->advance;
+
+        if ($sell->payment_received > $request->calculatedPrice) {
+            $due = 0;
+            $sell->due_to_company = $due;
+            $sell->save();
+
+            if ($id == 0) {
+
+                $sells = Sell::whereCustomerId($findCustomer->id)->where('due_to_company', '>', 0)->get();
+                $totalDues = Sell::whereCustomerId($findCustomer->id)->sum('due_to_company');
+
+                $remainingBalance = $getAdvance + $sell->payment_received - $request->calculatedPrice;
+                $inputtedAmount = $remainingBalance;
+                $bulkAmount = 0;
+
+                foreach ($sells as $item) {
+                    if ($inputtedAmount < $item->due_to_company) {
+                        $item->payment_received += $inputtedAmount;
+                        $item->due_to_company   -= $inputtedAmount;
+                        $item->save();
+
+                        // dd($inputtedAmount);
+
+                        // // // // == ===== == Receivable Account Start ==>
+                        $receivableData = Receivable::where('sell_id', $item->id)->where('customer_id', $item->customer_id)->first();
+                        if ($receivableData) {
+                            $receivableData->receivable_amount -= $inputtedAmount;
+                            $receivableData->save();
+                        }
+                        // // // // == ===== == Receivable Account End ==>
+
+                        break;
+                    } else {
+
+                        $inputtedAmount -= $item->due_to_company;
+                        $bulkAmount += $item->due_to_company;
+
+                        $item->payment_received = $item->total_price;
+                        $item->due_to_company = 0;
+                        $item->save();
+
+
+                        // // // // == ===== == Receivable Account Start ==>
+                        $receivableData = Receivable::where('sell_id', $item->id)->where('customer_id', $item->customer_id)->first();
+                        if ($receivableData) {
+                            $receivableData->receivable_amount = 0;
+                            $receivableData->save();
+                        }
+                        // // // // == ===== == Receivable Account End ==>
+
+
+
+                        if ($inputtedAmount == 0) {
+                            break;
+                        }
+                    }
+                }
+
+                if ($remainingBalance > $totalDues) {
+                    if ($totalDues == 0) {
+                        $extra = $sell->payment_received - $request->calculatedPrice;
+                    } else {
+                        $extra = $remainingBalance - $totalDues;
+                    }
+                    $findCustomer->advance += $extra;
+                    $findCustomer->save();
+
+                    // // // == ===== == Payable Account Start ==>
+                    $payableData = Payable::where('customer_id', $findCustomer->id)->where('payables_head_id', 2)->first();
+                    if ($payableData) {
+                        $payableData->payable_amount += $extra;
+                        $payableData->save();
+                    }
+                    // // // == ===== == Payable Account End ==>
+                }
+            }
+        } else {
+
+            if ($getAdvance > 0) {
+
+                $calculatedAdvance = $getAdvance + $sell->payment_received - $request->calculatedPrice;
+
+                if ($calculatedAdvance > 0) {
+                    // dd($getAdvance - $calculatedAdvance);
+
+                    $due = 0;
+                    $sell->due_to_company = $due;
+                    $sell->advance = $getAdvance - $calculatedAdvance;
+                    $sell->save();
+
+                    $findCustomer->advance = $calculatedAdvance;
+                    $findCustomer->save();
+
+                    // // // == ===== == Payable Account Start ==>
+                    $payableData = Payable::where('customer_id', $findCustomer->id)->where('payables_head_id', 2)->first();
+                    if ($payableData) {
+                        $payableData->payable_amount -= $getAdvance - $calculatedAdvance;
+                        $payableData->save();
+                    }
+                    // // // == ===== == Payable Account End ==>
+
+
+                    // // // // == ===== == Receivable Account Start ==>
+                    $receivableData = Receivable::where('sell_id', $sell->id)->where('customer_id', $sell->customer_id)->first();
+                    if ($receivableData) {
+                        $receivableData->receivable_amount = $due;
+                        $receivableData->save();
+                    }
+                    // // // // == ===== == Receivable Account End ==>
+
+
+                } else {
+                    // dd($getAdvance - $calculatedAdvance);
+
+                    $due = abs($calculatedAdvance);
+
+                    $sell->due_to_company = $due;
+                    $sell->advance = $getAdvance;
+                    $sell->save();
+
+                    $findCustomer->advance = 0;
+                    $findCustomer->save();
+
+                    // // // == ===== == Payable Account Start ==>
+                    $payableData = Payable::where('customer_id', $findCustomer->id)->where('payables_head_id', 2)->first();
+                    if ($payableData) {
+                        $payableData->payable_amount -= $getAdvance;
+                        $payableData->save();
+                    }
+                    // // // == ===== == Payable Account End ==>
+
+
+                    // // // // == ===== == Receivable Account Start ==>
+                    $receivableData = Receivable::where('sell_id', $sell->id)->where('customer_id', $sell->customer_id)->first();
+                    if ($receivableData) {
+                        $receivableData->receivable_amount = $due;
+                        $receivableData->save();
+                    }
+                    // // // // == ===== == Receivable Account End ==>
+
+                }
+            } else {
+                $due = $request->calculatedPrice - $sell->payment_received;
+
+                $sell->due_to_company = $due;
+                $sell->save();
+
+
+                // // // // == ===== == Receivable Account Start ==>
+                $receivableData = Receivable::where('sell_id', $sell->id)->where('customer_id', $sell->customer_id)->first();
+                if ($receivableData) {
+                    $receivableData->receivable_amount = $due;
+                    $receivableData->save();
+                }
+                // // // // == ===== == Receivable Account End ==>
+
+
+            }
+        }
+
+        if ($id > 0) {
+            $exist_sell_records = SellRecord::whereSellId($id)->get();
+            foreach ($exist_sell_records as $singleItem) {
+                $singleItem->delete();
+            }
+        }
+
+        foreach ($productsArr as $key => $item) {
+            $product = Product::whereId($item)->first();
+
+            if (isset($request->discount)) {
+                $proportionalDiscount = ($priceTotalArr[$key] / $request->calculatedPrice) * $request->discount;
+                $adjustedTotal = $priceTotalArr[$key] - $proportionalDiscount;
+                $averageSellingPrice = $adjustedTotal / $qtyArr[$key];
+            } else {
+                $averageSellingPrice = $priceTotalArr[$key] / $qtyArr[$key];
+            }
+
+            $sellRecord = new SellRecord();
+            $sellRecord->sell_id = $sell->id;
+            $sellRecord->purchase_batch_id = $batchIdArr[$key];
+            $sellRecord->product_id = $product->id;
+            $sellRecord->product_name = $product->name;
+            $sellRecord->discount = $discountsArr[$key];
+            $sellRecord->avg_purchase_price = $avgpurchasepriceArr[$key];
+            $sellRecord->qty = $qtyArr[$key];
+            $sellRecord->sell_qty = $qtyArr[$key];
+            $sellRecord->sell_price = $sellPriceArr[$key];
+            $sellRecord->avg_sell_price = $averageSellingPrice;
+            $sellRecord->total_amount = $priceTotalArr[$key];
+            // ====================
+            $sellRecord->profit =  $sellRecord->avg_sell_price * $sellRecord->sell_qty - $sellRecord->avg_purchase_price * $sellRecord->sell_qty;
+            // ====================
+
+            $sellRecord->save();
+
+            $stock = Stock::wherePurchaseBatchId($batchIdArr[$key])->whereProductId($product->id)->first();
+            $stock->stock -= $qtyArr[$key];
+            $stock->save();
+
+            $stockItem = StockItem::whereProductId($product->id)->first();
+            $stockItem->stock -= $qtyArr[$key];
+            $stockItem->total_sell_qty += $qtyArr[$key];
+            $stockItem->save();
+        }
+
+        $accArr = [
+            'sell_id'           => $sell->id,
+            'type'              => 2,
+            'amount'            => $request->calculatedPrice,
+            'description'       => "Sell Products to customer " . $sell->customer->name . ". Sell invoice (" . $sell->invoice_no . ")." . ($due ? ' with a due of ' . $due . ' Tk' : ''),
+            'customer_id'       => $sell->customer_id,
+        ];
+
+        updateAcc($accArr, 'sell_id', $id, 2);
+
+        if ($request->balance > 0 && $id == 0) {
+            $accArr = [
+                'sell_id'           => $sell->id,
+                'type'              => 13,
+                'credit'            => $request->balance,
+                'description'       => "Received " . showAmount($request->balance) . " Tk from Customer " . $sell->customer->name .  " for Sell invoice (" . $sell->invoice_no . ").",
+                'customer_id'       => $sell->customer_id,
+                'payment_method'    => $request->payment_method,
+            ];
+
+            $account = updateAcc($accArr, 'NTR', $id, 13);
+
+            if ($request->payment_method == 2) {
+
+                $bankTrArr = [
+                    'account_id'       => $account->id,
+                    'depositor_name'  => $request->depositor_name,
+                    'credit'            => $request->balance,
+                    'description'      => 'Company received payment from Customer ' . $sell->customer->name,
+                    'bank_id'          => $request->bank_id,
+                    'check_no'         => $request->check_no,
+                ];
+
+                bankTr($account, $bankTrArr);
+            }
+        }
+
+        if ($request->has('from_pos')) {
+            // return redirect()->route('pos.index')->with('success', 'New Sell created successfully');
+            $sellRecords = SellRecord::where('sell_id', $sell->id)
+            ->with('product')
+            ->get();  
+    
+            return redirect()->route('pos.index')
+                ->with('success', 'New Sell created successfully')
+                ->with('print', true)      // Trigger print flag
+                ->with('sellRecord', $sellRecords);  
+        }
+
+
+        
+        $notify[] = ['success', $message];
+        return to_route('sell.index')->withNotify($notify);
+    }
+
+
+    public function delete($id)
+    {
+        $sell = Sell::find($id);
+        $sell->is_deleted = 1;
+        $sell->save();
+
+        $notify[] = ['success', 'Sell has been successfully deleted'];
+        return back()->withNotify($notify);
+    }
+}

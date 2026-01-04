@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Balance Sheet</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .total {
+            font-weight: bold;
+            background-color: #f1f1f1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Balance Sheet</h1>
+
+        <h2>Assets:</h2>
+        <table>
+            <tr>
+                <th>Description</th>
+                <th>Amount (Tk)</th>
+            </tr>
+            <tr>
+                <td>Fixed Asset</td>
+                <td>{{ $totalAssets }}</td>
+            </tr>
+            <tr>
+                <td>Cash</td>
+                <td>{{ $currentCashAmount }}</td>
+            </tr>
+            <tr>
+                <td>Bank</td>
+                <td>{{ $currentBankAmount }}</td>
+            </tr>
+            <tr>
+                <td>Receivable Amount</td>
+                <td>{{ $totalReceivableAmount }}</td>
+            </tr>
+            <tr>
+                <td>Inventory</td>
+                <td>{{ $totalPurchaseStock }}</td>
+            </tr>
+            <tr class="total">
+                <td><strong>Total Assets</strong></td>
+                <td><strong>{{ $totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock }}</strong>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Liabilities:</h2>
+        <table>
+            <tr>
+                <th>Description</th>
+                <th>Amount (Tk)</th>
+            </tr>
+            <tr>
+                <td>Payable Amount</td>
+                <td>{{ $totalPayableAmount - $employeePayableSalary }}</td>
+            </tr>
+            <tr>
+                <td>Employee Salary</td>
+                <td>{{ $employeePayableSalary }}</td>
+            </tr>
+
+        </table>
+
+        <h2>Equity:</h2>
+        <table>
+            <tr>
+                <th>Description</th>
+                <th>Amount (Tk)</th>
+            </tr>
+            <tr>
+                <td>Owner's Capital</td>
+                <td>{{ $totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock - $totalPayableAmount - $incomes }}
+                </td>
+            </tr>
+            <tr>
+                <td>Other's Income</td>
+                <td>{{ $incomes }}</td>
+            </tr>
+            {{-- <h4>Total Libilities + Equity: ({{  ($totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock) }})</h4> --}}
+            <tr class="total">
+                <td><strong>Total Liabilities + Equity</strong></td>
+                <td><strong>{{ $totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock - $totalPayableAmount + $totalPayableAmount }}</strong>
+                </td>
+            </tr>
+        </table>
+
+    </div>
+
+</body>
+
+</html>

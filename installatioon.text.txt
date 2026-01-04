@@ -1,0 +1,36 @@
+php artisan migrate:refresh --seed
+
+php artisan db:seed --class=PermissionTableSeeder
+
+php artisan db:seed --class=CreateAdminUserSeeder
+
+php artisan db:seed --class=BsTypeSeeder 
+
+php artisan db:seed --class=ReceivableHeadSeeder
+
+php artisan db:seed --class=PayableHeadSeeder
+
+php artisan db:seed --class=AssetHeadSeeder
+
+php artisan db:seed --class=CustomerTypeSeeder
+
+php artisan db:seed --class=ProductUnitSeeder
+
+php artisan db:seed --class=WareHouseSeeder
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ALGORITHM=UNDEFINED DEFINER=`bsdbukgr`@`localhost` SQL SECURITY DEFINER

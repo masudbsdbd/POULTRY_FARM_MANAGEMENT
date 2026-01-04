@@ -1,0 +1,699 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Account;
+use App\Models\Bank;
+use App\Models\BankTransaction;
+use App\Models\Product;
+use App\Models\Purchase;
+use App\Models\PurchaseItem;
+use App\Models\Supplier;
+use App\Models\PurchaseBatch;
+use App\Models\Stock;
+use App\Models\StockItem;
+use Illuminate\Http\Request;
+use App\Models\BsType;
+use App\Models\Payable;
+use App\Models\BsAccount;
+use App\Models\JournalEntry;
+use App\Models\Receivable;
+use App\Models\Warehouse;
+
+class PurchaseController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('permission:purchase-list', ['only' => ['index']]);
+        $this->middleware('permission:purchase-create|purchase-edit', ['only' => ['store']]);
+        $this->middleware('permission:purchase-create', ['only' => ['create']]);
+        $this->middleware('permission:purchase-edit', ['only' => ['edit']]);
+        $this->middleware('permission:purchase-delete', ['only' => ['delete']]);
+        $this->middleware('permission:purchase-payment', ['only' => ['payDue']]);
+    }
+    public function index()
+    {
+        $pageTitle = 'Purchase List';
+        $purchases = Purchase::with('items', 'items.product', 'items.product.unit', 'items.warehouse')->notDeleted()->latest()->paginate(gs()->pagination);
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+        return view('purchase.index', compact('pageTitle', 'purchases', 'banks'));
+    }
+
+    public function create()
+    {
+        $pageTitle = 'Create New Purchase';
+        $suppliers = Supplier::whereStatus(1)->latest()->get();
+        $products = Product::whereStatus(1)->latest()->get();
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+
+        $warehouses = Warehouse::select("id", "warehouse_name")->get();
+
+        return view('purchase.create', compact('pageTitle', 'suppliers', 'products', 'banks', 'warehouses'));
+    }
+
+    public function edit($id)
+    {
+        $pageTitle = 'Edit Purchase';
+        $suppliers = Supplier::whereStatus(1)->latest()->get();
+        $products = Product::whereStatus(1)->latest()->get();
+        $purchase = Purchase::findOrFail($id);
+        $purchase_items = $purchase->items;
+        $paymentExist = Account::wherePurchaseId($purchase->id)->whereType(14)->first();
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+        $warehouses = Warehouse::select("id", "warehouse_name")->get();
+
+        return view('purchase.create', compact('pageTitle', 'suppliers', 'products', 'purchase', 'purchase_items', 'banks', 'paymentExist', 'warehouses'));
+    }
+
+
+    public function payDue(Request $request, $id)
+    {
+        $purchase = Purchase::whereId($id)->first();
+
+        if ($request->balance > $purchase->due_to_company) {
+            $notify[] = ['error', 'The due amount entered is incorrect. Please verify and try again.'];
+            return back()->withNotify($notify);
+        }
+
+        $bank = Bank::whereId($request->bank_id)->first();
+        if (isset($bank) && $request->balance > $bank->balance) {
+            $notify[] = ['error', 'Insufficient balance in ' . $bank->bank_name];
+            return back()->withNotify($notify);
+        }
+
+        $purchase->due_to_company -= $request->balance;
+        $purchase->payment_received += $request->balance;
+        $purchase->save();
+
+        $payableExist = Payable::where('purchase_id', $id)->where('payables_head_id', 1)->first();
+
+        if ($payableExist) {
+            $payableExist->payable_amount -= $request->balance;
+            $payableExist->save();
+        }
+
+        $accArr = [
+            'purchase_id'       => $purchase->id,
+            'type'              => 8,
+            'debit'             => $request->balance,
+            'description'       => $request->comment ? $request->comment : "Paid the due amount of " . $request->balance . " Tk to the supplier " . $purchase->supplier->name . " for previous Purchase (" . $purchase->batch->batch_code .  ")",
+            'supplier_id'       => $purchase->supplier_id,
+            'payment_method'    => $request->payment_method,
+        ];
+
+        $account = updateAcc($accArr, 'NTR', $purchase->id, 8);
+
+        if ($request->payment_method == 2) {
+
+            $bankTrArr = [
+                'account_id'       => $account->id,
+                'withdrawer_name'  => $request->withdrawer_name,
+                'debit'            => $request->balance,
+                'description'      => 'Company give due to Supplier ' . $purchase->supplier->name . ' And Purchase Batch is ' . $purchase->batch->batch_code,
+                'bank_id'          => $request->bank_id,
+                'check_no'         => $request->check_no,
+            ];
+
+            bankTr($account, $bankTrArr);
+        }
+
+        $notify[] = ['success', 'Purchase Due has been paid successfully.'];
+        return back()->withNotify($notify);
+    }
+
+    public function generatePdf($id)
+    {
+        $mpdf = setPdf();
+        $purchase = Purchase::with('items.warehouse')->whereId($id)->first();
+        $html = view('purchase.purchase-invoice', compact('purchase'))->render();
+        $mpdf->WriteHTML($html);
+
+        return response($mpdf->Output('purchase-invoice-' . $purchase->id . '.pdf', 'I'))->header('Content-Type', 'application/pdf');
+    }
+
+    public function store(Request $request, $id = 0)
+    {
+        // dd($request->all());
+
+        // return $request;
+        $request->validate([
+            'supplier_id'       => 'required',
+            'purchase_date'     => 'required',
+            'products'          => 'required',
+            'qty'               => 'required',
+            'unitPrice'         => 'required',
+            'priceTotal'        => 'required',
+            'totalQuantity'     => 'required',
+            'calculatedPrice'   => 'required',
+            'warehouse_id'      => 'required',
+        ]);
+
+        if ($id == 0) {
+            $request->validate([
+                'payment_method'    => 'required',
+            ]);
+        }
+
+        $bank = Bank::whereId($request->bank_id)->first();
+        if (isset($bank) && $request->balance > $bank->balance && $id == 0) {
+            $notify[] = ['error', 'Insufficient balance in ' . $bank->bank_name];
+            return back()->withNotify($notify);
+        }
+
+        $productIdArr = $request->products;
+        $qtyArr = $request->qty;
+        $prductUnitPrice = $request->unitPrice;
+        $priceArr = $request->priceTotal;
+        $warehouses = $request->warehouse_id;
+
+        // Calculate the original amount. Eliminate discount and commission
+        if (isset($request->commission) && isset($request->discount)) {
+            $amountBeforeDiscount = $request->calculatedPrice + $request->discount;
+            $originalAmount = $amountBeforeDiscount / (1 - $request->commission / 100);
+        } elseif (isset($request->commission)) {
+            $originalAmount = $request->calculatedPrice / (1 - $request->commission / 100);
+        } elseif (isset($request->discount)) {
+            $originalAmount = $request->calculatedPrice + $request->discount;
+        } else {
+            $originalAmount = $request->calculatedPrice;
+        }
+
+        if ($id > 0) {
+
+            $purchase = Purchase::whereId($id)->first();
+            $message = 'Purchase updated successfully';
+            $purchase->update_by         = auth()->user()->id;
+            // $previousTotalPrice = $purchase->total_price;
+            $prviousParchasePaymentReceived = $purchase->payment_received;
+            $prviousCalculatedPrice = $purchase->total_price;
+            $previousStoredSupplier = $purchase->supplier_id;
+
+            $purchaseItems = PurchaseItem::where('purchase_id', $id)->get();
+
+            foreach ($purchaseItems as $single_item) {
+                $stockItem = StockItem::where('product_id', $single_item->product_id)->first();
+                $stockItem->total_purchase_qty -= $single_item->qty;
+                $stockItem->stock -= $single_item->qty;
+                $stockItem->save();
+            }
+        } else {
+            $purchase           = new Purchase();
+            $message            = 'New Purchase created successfully';
+        }
+
+        // $productCalculatedPrice = isset($previousTotalPrice) ? ($request->calculatedPrice == $previousTotalPrice ? $purchase->main_price : $request->calculatedPrice) : $request->calculatedPrice;
+
+        $purchase->supplier_id       = $request->supplier_id;
+        $purchase->purchase_date     = $request->purchase_date;
+        $purchase->total_qty         = $request->totalQuantity;
+        $purchase->main_price        = $originalAmount;
+        $purchase->total_price       = $request->calculatedPrice;
+        $purchase->commission        = $request->commission;
+        $purchase->discount          = $request->discount;
+        $purchase->payment_received  = $id == 0 ? $request->balance : $purchase->payment_received;
+        $purchase->invoice_no        = "purchase-invoice-" . $purchase->id;
+        $purchase->entry_by          = auth()->user()->id;
+        $purchase->entry_date        = now();
+        $purchase->save();
+
+        $purchase->invoice_no        = "purchase-invoice-" . $purchase->id;
+        $purchase->save();
+
+
+        // // calculate commission and discount when edit
+        // if ($id > 0) {
+        //     if (isset($purchase->commission) && isset($purchase->discount)) {
+        //         $afterCommission = ($purchase->commission * $productCalculatedPrice) / 100;
+        //         $productAfterCommission = $productCalculatedPrice - $afterCommission;
+        //         $productCalculatedPrice = $productAfterCommission - $purchase->discount;
+        //     } elseif (isset($purchase->commission)) {
+        //         $afterCommission = ($purchase->commission * $productCalculatedPrice) / 100;
+        //         $productCalculatedPrice = $productCalculatedPrice - $afterCommission;
+        //     } elseif (isset($purchase->discount)) {
+        //         $productCalculatedPrice = $productCalculatedPrice - $purchase->discount;
+        //     }
+        // }
+
+        // // Calculate the original amount. Eliminate discount and commission
+        // if (isset($purchase->commission) && isset($purchase->discount)) {
+        //     $amountBeforeDiscount = $productCalculatedPrice + $purchase->discount;
+        //     $originalAmount = $amountBeforeDiscount / (1 - $purchase->commission / 100);
+        // } elseif (isset($purchase->commission)) {
+        //     $originalAmount = $productCalculatedPrice / (1 - $purchase->commission / 100);
+        // } elseif (isset($purchase->discount)) {
+        //     $originalAmount = $productCalculatedPrice + $purchase->discount;
+        // } else {
+        //     $originalAmount = $productCalculatedPrice;
+        // }
+
+
+        // $purchase->total_price = $productCalculatedPrice;
+        // $purchase->save();
+
+        if ($id == 0) {
+            $batch = new PurchaseBatch();
+            $batch->supplier_id = $request->supplier_id;
+            $batch->purchase_id = $purchase->id;
+            $batch->save();
+
+            $batch->batch_code  = 'SQ' . $batch->id;
+            $batch->save();
+        }
+
+        $findSupplier = Supplier::whereid($request->supplier_id)->first();
+
+
+
+
+        if ($id > 0) {
+            $previousGiven = $purchase->advance;
+
+            $advanceAmount = $prviousParchasePaymentReceived - $request->calculatedPrice;
+            $previousAdvanceAmount = $purchase->purchase_revision_advance;
+
+            $bsSubTypeOne = BsType::find(8);
+            $existingBS = BsAccount::where('purchase_id', $purchase->id)->where('account_type', 1)->where('account_sub_type', 8)->orderBy('id', 'desc')->first();
+
+            // dd($existingBS);
+
+            if ($prviousParchasePaymentReceived > $request->calculatedPrice) {
+                // dd(1);
+
+                $purchase->purchase_revision_advance = $advanceAmount;
+                $purchase->save();
+
+                $findSupplier->advance -= $previousAdvanceAmount;
+                $findSupplier->save();
+
+                $findSupplier->advance += $advanceAmount;
+                $findSupplier->save();
+
+                // // // == ===== == Receivable Account Start ==>
+                $receivableData = Receivable::where('supplier_id', $request->supplier_id)->where('receivable_head_id', 3)->first();
+                if ($receivableData) {
+                    $receivableData->receivable_amount -= $previousAdvanceAmount;
+                    $receivableData->receivable_amount += $advanceAmount;
+                    $receivableData->save();
+                }
+                // // // == ===== == Receivable Account End ==>
+
+            } else {
+                // dd(2);
+
+                $purchase->purchase_revision_advance = 0;
+                $purchase->save();
+
+                $findSupplier->advance -= $previousAdvanceAmount;
+                $findSupplier->save();
+
+                // // // == ===== == Receivable Account Start ==>
+                $receivableData = Receivable::where('supplier_id', $request->supplier_id)->where('receivable_head_id', 3)->first();
+                if ($receivableData) {
+                    $receivableData->receivable_amount -= $previousAdvanceAmount;
+                    $receivableData->save();
+                }
+                // // // == ===== == Receivable Account End ==>
+
+
+                if (isset($existingBS)) {
+                    $existingBS->delete();
+                }
+            }
+
+            if (isset($purchase->advance)) {
+                if ($prviousParchasePaymentReceived > $request->calculatedPrice) {
+
+                    // $advanceAmount = $prviousParchasePaymentReceived - $request->calculatedPrice;
+                    // $findSupplier->advance += $advanceAmount;
+                    // $findSupplier->save();
+
+                } else {
+                    if ($findSupplier->id == $previousStoredSupplier) {
+                        $findSupplier->advance += $previousGiven;
+                        $findSupplier->save();
+
+
+                        // // // // == ===== == Payable Account Start ==>
+                        $receivableData = Receivable::where('receivable_head_id', 3)->where('supplier_id', $findSupplier->id)->first();
+                        if ($receivableData) {
+                            $receivableData->receivable_amount += $previousGiven;
+                            $receivableData->save();
+                        }
+                        // // // // == ===== == Payable Account End ==>
+
+                    } else {
+                        $previousSupplier = Supplier::whereid($previousStoredSupplier)->first();
+                        $previousSupplier->advance += $previousGiven;
+                        $previousSupplier->save();
+
+
+                        // // // // == ===== == Payable Account Start ==>
+                        $receivableData = Receivable::where('receivable_head_id', 3)->where('supplier_id', $previousStoredSupplier->id)->first();
+                        if ($receivableData) {
+                            $receivableData->receivable_amount += $previousGiven;
+                            $receivableData->save();
+                        }
+                        // // // // == ===== == Payable Account End ==>
+
+
+                    }
+                }
+            }
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // dd(1);
+
+        $getAdvance = $findSupplier->advance;
+
+        if ($purchase->payment_received > $request->calculatedPrice) {
+            $due = 0;
+            $purchase->due_to_company = $due;
+            $purchase->save();
+
+            if ($id == 0) {
+
+                $purchases = Purchase::whereSupplierId($findSupplier->id)->where('due_to_company', '>', 0)->get();
+                $totalDues = Purchase::whereSupplierId($findSupplier->id)->sum('due_to_company');
+
+                $remainingBalance = $getAdvance + $purchase->payment_received - $request->calculatedPrice;
+                $inputtedAmount = $remainingBalance;
+                $bulkAmount = 0;
+
+                foreach ($purchases as $item) {
+
+                    if ($inputtedAmount < $item->due_to_company) {
+                        $item->payment_received += $inputtedAmount;
+                        $item->due_to_company   -= $inputtedAmount;
+                        $item->save();
+
+                        // // // // == ===== == Payable Account Start ==>
+                        $payableData = Payable::where('purchase_id', $item->id)->where('supplier_id', $item->supplier_id)->first();
+                        if ($payableData) {
+                            $payableData->payable_amount -= $inputtedAmount;
+                            $payableData->save();
+                        }
+                        // // // // == ===== == Payable Account End ==>
+
+                        break;
+                    } else {
+                        // dd($inputtedAmount);
+                        // dd($item->due_to_company);
+
+                        $inputtedAmount -= $item->due_to_company;
+                        $bulkAmount += $item->due_to_company;
+
+                        $item->payment_received = $item->total_price;
+                        $item->due_to_company = 0;
+                        $item->save();
+
+                        // // // // == ===== == Payable Account Start ==>
+                        $payableData = Payable::where('purchase_id', $item->id)->where('supplier_id', $item->supplier_id)->first();
+                        if ($payableData) {
+                            $payableData->payable_amount = 0;
+                            $payableData->save();
+                        }
+                        // // // // == ===== == Payable Account End ==>
+
+
+                        if ($inputtedAmount == 0) {
+                            break;
+                        }
+                    }
+                }
+
+                if ($remainingBalance > $totalDues) {
+                    // dd($remainingBalance, $totalDues);
+                    if ($totalDues == 0) {
+                        $extra = $purchase->payment_received - $request->calculatedPrice;
+                    } else {
+                        $extra = $remainingBalance - $totalDues;
+                    }
+
+                    $findSupplier->advance += $extra;
+                    $findSupplier->save();
+
+                    // // // == ===== == Receivable Account Start ==>
+                    $receivableData = Receivable::where('supplier_id', $findSupplier->id)->where('receivable_head_id', 3)->first();
+                    if ($receivableData) {
+                        $receivableData->receivable_amount += $extra;
+                        $receivableData->save();
+                    }
+                    // // // == ===== == Receivable Account End ==>
+
+                }
+            }
+        } else {
+
+            if ($getAdvance > 0) {
+
+                $calculatedAdvance = $getAdvance + $purchase->payment_received - $request->calculatedPrice;
+
+                // dd($calculatedAdvance);
+
+                if ($calculatedAdvance > 0) {
+
+                    $due = 0;
+                    $purchase->due_to_company = $due;
+                    $purchase->advance = $getAdvance - $calculatedAdvance;
+                    $purchase->save();
+
+                    $findSupplier->advance = $calculatedAdvance;
+                    $findSupplier->save();
+
+                    // dd($getAdvance - $calculatedAdvance);
+
+                    // // // == ===== == Receivable Account Start ==>
+                    $receivableData = Receivable::where('supplier_id', $findSupplier->id)->where('receivable_head_id', 3)->first();
+                    if ($receivableData) {
+                        $receivableData->receivable_amount -= $getAdvance - $calculatedAdvance;
+                        $receivableData->save();
+                    }
+                    // // // == ===== == Receivable Account End ==>
+
+
+
+                } else {
+
+                    $due = abs($calculatedAdvance);
+                    $purchase->due_to_company = $due;
+                    $purchase->advance = $getAdvance;
+                    $purchase->save();
+
+                    $findSupplier->advance = 0;
+                    $findSupplier->save();
+
+                    // ACCOUNTS PAYABLE CALCULATION START
+                    $isExistAccPayable = Payable::where('purchase_id', $id)->where('payables_head_id', 1)->first();
+
+                    $acc_payable = isset($isExistAccPayable) ? $isExistAccPayable : new Payable();
+                    $acc_payable->purchase_id = $purchase->id;
+                    $acc_payable->supplier_id = $purchase->supplier_id;
+                    $acc_payable->payables_head_id = 1;
+                    $acc_payable->invoice_no = $purchase->invoice_no;
+                    $acc_payable->payable_amount = $due;
+                    $acc_payable->description = "Purchase due amount of " . $acc_payable->due_amount . " Tk has been entered in Account's Payable.";
+                    $acc_payable->save();
+                    // ACCOUNTS PAYABLE CALCULATION END
+
+                    // dd($due);
+                    // dd($getAdvance, $calculatedAdvance,$due);
+
+                    // // // == ===== == Receivable Account Start ==>
+                    $receivableData = Receivable::where('supplier_id', $findSupplier->id)->where('receivable_head_id', 3)->first();
+                    if ($receivableData) {
+                        $receivableData->receivable_amount -= $getAdvance;
+                        $receivableData->save();
+                    }
+                    // // // == ===== == Receivable Account End ==>
+
+
+                }
+            } else {
+
+                $due = $request->calculatedPrice - $purchase->payment_received;
+
+                $purchase->due_to_company = $due;
+                $purchase->save();
+
+                // ACCOUNTS PAYABLE CALCULATION START
+
+                $isExistAccPayable = Payable::where('purchase_id', $id)->where('payables_head_id', 1)->first();
+
+                $acc_payable = isset($isExistAccPayable) ? $isExistAccPayable : new Payable();
+                $acc_payable->purchase_id = $purchase->id;
+                $acc_payable->supplier_id = $purchase->supplier_id;
+                $acc_payable->payables_head_id = 1;
+                $acc_payable->invoice_no = $purchase->invoice_no;
+                $acc_payable->payable_amount = $due;
+                $acc_payable->description = "Purchase due amount of " . $acc_payable->due_amount . " Tk has been entered in Account's Payable.";
+                $acc_payable->save();
+                // ACCOUNTS PAYABLE CALCULATION END
+
+                // // == ===== == BS Account Start ==>
+                // if ($due >  0) {
+                //     $bsSubTypeOne = BsType::find(5);
+                //     $journalEntryData = new JournalEntry();
+                //     $journalEntryData->description = $request->comment ? $request->comment : "Due" . $due . " Tk for this purchase";
+                //     $journalEntryData->entry_date = now()->format('Y-m-d H:i:s');
+                //     $journalEntryData->entry_by = auth()->user()->id;
+                //     $journalEntryData->amount = $due;
+                //     $journalEntryData->save();
+
+                //     $creditEntry = new BsAccount();
+                //     $creditEntry->purchase_id = $purchase->id;
+                //     $creditEntry->journal_entry_id = $journalEntryData->id;
+                //     $creditEntry->account_type = $bsSubTypeOne->type;
+                //     $creditEntry->account_sub_type = $bsSubTypeOne->id;
+                //     $creditEntry->description = "Added " . $due . " Tk for this purchase due.";
+                //     $creditEntry->credit = $due;
+                //     $creditEntry->debit = 0;
+                //     $creditEntry->save();
+                // }
+                // // == ===== == BS Account End ==>
+            }
+        }
+
+        if (!empty($productIdArr)) {
+            if ($id > 0) {
+                $exist_purchase_item = PurchaseItem::wherePurchaseId($id)->get();
+                foreach ($exist_purchase_item as $singleItem) {
+                    $singleItem->delete();
+                }
+            }
+
+            if ($id > 0) {
+                $existing_batch_id = PurchaseBatch::wherePurchaseId($id)->first();
+                $existing_stocks = Stock::where('purchase_batch_id', $existing_batch_id->id)->get();
+                foreach ($existing_stocks as $singleStock) {
+                    $singleStock->delete();
+                }
+            }
+
+            foreach ($productIdArr as $key => $product_id) {
+                $product = Product::find($product_id);
+                $purchase_item = new PurchaseItem();
+                $purchase_item->purchase_id  = $purchase->id;
+                $purchase_item->product_id = $product->id;
+                $purchase_item->price = $prductUnitPrice[$key];
+                $purchase_item->qty = $qtyArr[$key];
+                $purchase_item->warehouse_id = $warehouses[$key];
+                $purchase_item->supplier_name = $purchase->supplier->name;
+                $purchase_item->total_amount = $priceArr[$key];
+                $purchase_item->update_by = auth()->user()->id;
+                $purchase_item->save();
+
+                if ($id > 0) {
+                    $getBatch = PurchaseBatch::wherePurchaseId($id)->first();
+                }
+
+                $singleProduct = [
+                    'originalPrice' => $purchase_item->price * $purchase_item->qty,
+                    'quantity' => $purchase_item->qty
+                ];
+
+                $averagePrice = $this->calculateAveragePrice($request->calculatedPrice, $singleProduct, $originalAmount);
+
+                $purchase_item->avg_purchase_price = $averagePrice;
+                $purchase_item->save();
+
+                $newStock = new Stock();
+                $newStock->purchase_id = $purchase->id;
+                $newStock->purchase_batch_id = isset($getBatch) ? $getBatch->id : $batch->id;
+                $newStock->product_id = $product->id;
+                $newStock->product_name = $product->name;
+                $newStock->avg_purchase_price = $averagePrice;
+                $newStock->purchase_qty = $purchase_item->qty;
+                $newStock->total_purchase_price = $newStock->avg_purchase_price * $newStock->purchase_qty;
+                $newStock->stock += $purchase_item->qty;
+                $newStock->warehouse_id = $warehouses[$key];
+                $newStock->save();
+
+                $existingItemStock = StockItem::whereProductId($product->id)->first();
+                if (isset($existingItemStock)) {
+                    $itemStock = StockItem::whereProductId($product->id)->first();
+                    $itemStock->total_purchase_qty += $newStock->purchase_qty;
+                    $itemStock->stock += $purchase_item->qty;
+                } else {
+                    $itemStock = new StockItem();
+                    $itemStock->total_purchase_qty = $purchase_item->qty;
+                    $itemStock->stock = $purchase_item->qty;
+                }
+
+                $itemStock->product_id = $product->id;
+                $itemStock->product_name = $product->name;
+                $itemStock->save();
+            }
+        }
+
+        $accArr = [
+            'purchase_id'       => $purchase->id,
+            'type'              => 1,
+            'amount'            => $request->calculatedPrice,
+            'description'       => "Purchase(" . $purchase->batch->batch_code  . ") Products Form Supplier " . $purchase->supplier->name . ($due ? ' with a due of ' . $due . ' Tk' : ''),
+            'supplier_id'       => $purchase->supplier_id,
+        ];
+
+        updateAcc($accArr, 'purchase_id', $id, 1);
+
+        if ($request->balance > 0 && $id == 0) {
+
+            $accArr = [
+                'purchase_id'       => $purchase->id,
+                'type'              => 14,
+                'debit'             => $request->balance,
+                'description'       => "Paid " . showAmount($request->balance) . " Tk to Supplier " . $purchase->supplier->name .  " for Purchase (" . $purchase->batch->batch_code  . ").",
+                'supplier_id'       => $purchase->supplier_id,
+                'payment_method'    => $request->payment_method,
+            ];
+
+            $account = updateAcc($accArr, 'NTR', $id, 14);
+
+            if ($request->payment_method == 2) {
+
+                $bankTrArr = [
+                    'account_id'       => $account->id,
+                    'withdrawer_name'  => $request->withdrawer_name,
+                    'debit'            => $request->balance,
+                    'description'      => 'Company give payment to Supplier ' . $purchase->supplier->name . ' And Purchase Batch is ' . $purchase->batch->batch_code,
+                    'bank_id'          => $request->bank_id,
+                    'check_no'         => $request->check_no,
+                ];
+
+                bankTr($account, $bankTrArr);
+            }
+        }
+
+        $notify[] = ['success', $message];
+        return to_route('purchase.index')->withNotify($notify);
+    }
+
+    function calculateAveragePrice($totalAmount, $product, $totalOriginalPrice)
+    {
+        $productProportion = $product['originalPrice'] / $totalOriginalPrice;
+        $adjustedPrice = $totalAmount * $productProportion;
+        $averagePrice = $adjustedPrice / $product['quantity'];
+        return $averagePrice;
+    }
+
+    public function delete($id)
+    {
+        $purchase = Purchase::find($id);
+        $purchase->is_deleted = 1;
+        $purchase->save();
+
+        $notify[] = ['success', 'Purchase has been successfully deleted'];
+        return back()->withNotify($notify);
+    }
+}

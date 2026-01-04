@@ -1,0 +1,332 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Account;
+use App\Models\Asset;
+use Illuminate\Http\Request;
+use App\Models\BsType;
+use App\Models\BsAccount;
+use App\Models\JournalEntry;
+use App\Models\Payable;
+use App\Models\Receivable;
+use App\Models\Sell;
+use App\Models\Stock;
+use App\Models\SellRecord;
+use App\Models\Damage;
+use Carbon\Carbon;
+
+class BsController extends Controller
+{
+    //
+    public function __construct()
+    {
+        $this->middleware('permission:balance-sheet-maintain', ['only' => ['journalIndex','receivableIndex', 'chartAccount', 'journalCreate', 'journalStore']]);
+    }
+    public function journalIndex()
+    {
+
+        $pageTitle = "All Journals";
+
+        $allJournalEntry = JournalEntry::notDeleted()->latest()->get();
+
+        return view('bs-account.journal-index', compact('pageTitle', 'allJournalEntry'));
+    }
+
+    public function receivableIndex(Request $request)
+    {
+        // return $request;
+        $pageTitle = "Accounts Receivable";
+        $todayTime = Carbon::now()->format('d-m-Y');
+
+        $type = $request->type;
+        $date = $request->date;
+        $range = $request->range;
+
+        // return 1;
+
+        $receivableQuery = BsAccount::select(
+            'bs_accounts.sell_id',
+            'sells.invoice_no',
+            'sells.sell_date'
+        )
+            ->where('bs_accounts.account_type', 1)
+            ->where('bs_accounts.account_sub_type', 4)
+            ->join('sells', 'bs_accounts.sell_id', '=', 'sells.id')
+            ->groupBy('bs_accounts.sell_id', 'sells.invoice_no', 'sells.sell_date')
+            ->selectRaw('SUM(bs_accounts.credit) as total_credit, SUM(bs_accounts.debit) as total_debit, (SUM(bs_accounts.debit) - SUM(bs_accounts.credit)) as balance');
+
+        // return $receivableQuery;
+
+        if ($type) {
+            if ($type == 1 && $date) {
+                $givenDate = $date;
+                $receivableQuery = $receivableQuery->whereDate('sells.sell_date', $givenDate);
+            } elseif ($type == 2 && $range) {
+                $dates = explode(' to ', $range);
+                if (count($dates) == 2) {
+                    $startDate = $dates[0] . ' 00:00:00';
+                    $endDate = $dates[1] . ' 23:59:59';
+                    $receivableQuery = $receivableQuery->whereBetween('sells.sell_date', [$startDate, $endDate]);
+                }
+                $givenDate = [$startDate, $endDate];
+            } else {
+                $notify[] = ['error', 'Kindly select a valid date or date range.'];
+                return back()->withNotify($notify);
+            }
+        }
+
+        if ($request->action == 'print') {
+            $mpdf = setPdf();
+
+            $receivables = $receivableQuery->get();
+            $data = isset($givenDate) ? compact('receivables', 'givenDate') : compact('receivables');
+            $html = view('bs-account.acc-receivable-pdf', $data)->render();
+
+            $mpdf->WriteHTML($html);
+            return response($mpdf->Output('acc-receivable.pdf', 'I'))->header('Content-Type', 'application/pdf');
+        }
+
+        $receivables = $receivableQuery->paginate(gs()->pagination);
+
+        return view('bs-account.accounts-receivable', compact('pageTitle', 'receivables'));
+    }
+
+    // public function chartAccount()
+    // {
+    //     $allAssets = BsAccount::with('bsType')
+    //         ->where('account_type', 1)
+    //         ->get()
+    //         ->groupBy('bsType.id')
+    //         ->map(function ($group) {
+    //             $totalDebit = $group->sum('debit');
+    //             $totalCredit = $group->sum('credit');
+    //             return [
+    //                 'name' => $group->first()->bsType->name,
+    //                 'net_amount' => $totalDebit - $totalCredit,
+    //             ];
+    //         });
+
+    //     // dd($allAssets->toArray());
+    //     $totalAssets = $allAssets->sum('net_amount');
+
+
+    //     // Libilities->
+    //     $allLibilities = BsAccount::with('bsType')
+    //         ->where('account_type', 2)
+    //         ->get()
+    //         ->groupBy('bsType.id')
+    //         ->map(function ($group) {
+    //             $totalDebit = $group->sum('debit');
+    //             $totalCredit = $group->sum('credit');
+    //             return [
+    //                 'name' => $group->first()->bsType->name,
+    //                 'net_amount' => $totalCredit - $totalDebit,
+    //             ];
+    //         });
+    //     $totalLibilities = $allLibilities->sum('net_amount');
+
+    //     // dd($totalLibilities);
+
+    //     // Equity->
+    //     $allEquity = BsAccount::with('bsType')
+    //         ->where('account_type', 3)
+    //         ->get()
+    //         ->groupBy('bsType.id')
+    //         ->map(function ($group) {
+    //             $totalDebit = $group->sum('debit');
+    //             $totalCredit = $group->sum('credit');
+    //             return [
+    //                 'name' => $group->first()->bsType->name,
+    //                 'net_amount' => $totalCredit - $totalDebit,
+    //             ];
+    //         });
+    //     $totalEquity = $allEquity->sum('net_amount');
+
+
+    //     return view('bs-account.chart-account-index', compact('allAssets', 'totalAssets', 'allLibilities', 'totalLibilities', 'allEquity', 'totalEquity'));
+    // }
+
+
+    // public function chartAccount()
+    // {
+    //     $totalAssets = Asset::pluck('purchase_price')->sum();
+
+
+    //     $totalCashCredit = Account::where('payment_method', 1)->pluck('credit')->sum();
+    //     $totalCashDebit = Account::where('payment_method', 1)->pluck('debit')->sum();
+    //     $currentCashAmount = $totalCashCredit - $totalCashDebit;
+
+
+    //     $totalBankCredit = Account::where('payment_method', 2)->pluck('credit')->sum();
+    //     $totalBankDebit = Account::where('payment_method', 2)->pluck('debit')->sum();
+    //     $currentBankAmount = $totalBankCredit - $totalBankDebit;
+
+
+    //     // dd($currentBank);
+
+    //     $totalSupplierAdvanceReceivableAmountSum = Receivable::pluck('supplier_advance_amount')->sum();
+    //     $totalDueReceivableAmountSum = Receivable::pluck('due_amount')->sum();
+    //     $totalReceivableAmountSum = Receivable::pluck('receivable_amount')->sum();
+    //     $totalReceivableAmount = $totalSupplierAdvanceReceivableAmountSum + $totalDueReceivableAmountSum + $totalReceivableAmountSum;
+
+    //     // dd($totalSupplierAdvanceReceivableAmountSum, $totalDueReceivableAmountSum, $totalReceivableAmountSum);
+
+
+    //     $totalPurchaseStock = Stock::get()->sum(function ($stock) {
+    //         return $stock->avg_purchase_price * $stock->stock;
+    //     });
+
+    //     // dd($totalPurchaseStock);
+
+
+    //     $totalCustomerAdvancePayableAmountSum = Payable::pluck('customer_advance_amount')->sum();
+    //     $totalDuePayableAmountSum = Payable::pluck('due_amount')->sum();
+    //     $totalPayableAmountSum = Payable::pluck('payable_amount')->sum();
+    //     //find employee salary payable->
+    //     $employeePayableSalary = Payable::where('payables_head_id', 3)->pluck('due_amount')->sum();
+    //     $totalPayableAmount = $totalCustomerAdvancePayableAmountSum + $totalDuePayableAmountSum + $totalPayableAmountSum;
+    //     // dd($employeePayableSalary);
+    //     // dd($totalPayableAmount , $totalCustomerAdvancePayableAmountSum, $totalDuePayableAmountSum, $totalPayableAmountSum);
+
+
+    //     //find Income ->
+    //     $incomes = Account::where('type', 15)->pluck('credit')->sum();
+    //     // dd($incomes);
+
+    //     return view('bs-account.chart-account-index', compact('totalAssets', 'currentCashAmount', 'currentBankAmount', 'totalReceivableAmount', 'totalPurchaseStock', 'totalPayableAmount', 'incomes', 'employeePayableSalary'));
+    // }
+
+
+    public function chartAccount(Request $request)
+    {
+        $date = $request->date;
+    
+        if ($date) {
+            $date = Carbon::parse($date)->startOfDay(); 
+        } else {
+            $date = now(); 
+        }
+
+        $totalAssets = Asset::whereDate('purchase_date', '<=', $date)->pluck('purchase_price')->sum();
+    
+        $totalCashCredit = Account::where('payment_method', 1)->whereDate('created_at', '<=', $date)->pluck('credit')->sum();
+        $totalCashDebit = Account::where('payment_method', 1)->whereDate('created_at', '<=', $date)->pluck('debit')->sum();
+        $currentCashAmount = $totalCashCredit - $totalCashDebit;
+
+        // dd($currentCashAmount);
+    
+        $totalBankCredit = Account::where('payment_method', 2)->whereDate('created_at', '<=', $date)->pluck('credit')->sum();
+        $totalBankDebit = Account::where('payment_method', 2)->whereDate('created_at', '<=', $date)->pluck('debit')->sum();
+        $currentBankAmount = $totalBankCredit - $totalBankDebit;
+    
+        // $totalSupplierAdvanceReceivableAmountSum = Receivable::whereDate('created_at', '<=', $date)->pluck('supplier_advance_amount')->sum();
+        // $totalDueReceivableAmountSum = Receivable::whereDate('created_at', '<=', $date)->pluck('due_amount')->sum();
+        // $totalReceivableAmountSum = Receivable::whereDate('created_at', '<=', $date)->pluck('receivable_amount')->sum();
+        // $totalReceivableAmount = $totalSupplierAdvanceReceivableAmountSum + $totalDueReceivableAmountSum + $totalReceivableAmountSum;
+    
+        // ==================================
+        $totalReceivableAmountSum = Receivable::whereDate('created_at', '<=', $date)->pluck('receivable_amount')->sum();
+        $totalReceivableAmount =  $totalReceivableAmountSum;
+        // ==================================
+
+        $totalDamageAmount = Damage::whereDate('created_at', '<=', $date)->pluck('total_damage_price')->sum();
+        // dd($totalDamageAmount);
+
+
+        $totalPurchaseStock = Stock::whereDate('created_at', '<=', $date)->get()->sum(function ($stock) {
+            return $stock->avg_purchase_price * $stock->stock;
+        });
+
+        // $totalCustomerAdvancePayableAmountSum = Payable::whereDate('created_at', '<=', $date)->pluck('customer_advance_amount')->sum();
+        // $totalDuePayableAmountSum = Payable::whereDate('created_at', '<=', $date)->pluck('due_amount')->sum();
+        // $totalPayableAmountSum = Payable::whereDate('created_at', '<=', $date)->pluck('payable_amount')->sum();
+        // $employeePayableSalary = Payable::where('payables_head_id', 3)->whereDate('created_at', '<=', $date)->pluck('due_amount')->sum();
+        // $totalPayableAmount = $totalCustomerAdvancePayableAmountSum + $totalDuePayableAmountSum + $totalPayableAmountSum;
+
+        // ================================
+        $totalPayableAmountSum = Payable::whereDate('created_at', '<=', $date)->pluck('payable_amount')->sum();
+        $employeePayableSalary = Payable::where('payables_head_id', 3)->whereDate('created_at', '<=', $date)->pluck('payable_amount')->sum();
+        $totalPayableAmount = $totalPayableAmountSum;
+        // ================================
+    
+        $incomes = Account::where('type', 15)->whereDate('created_at', '<=', $date)->pluck('credit')->sum();
+
+        $totalSellProfit = SellRecord::whereDate('created_at', '<=', $date)->sum('profit');
+
+        // dd($totalSellProfit);
+    
+        if ($request->date) {
+            $data = compact('totalAssets', 'currentCashAmount', 'currentBankAmount', 'totalReceivableAmount', 'totalPurchaseStock', 'totalPayableAmount', 'incomes', 'employeePayableSalary', 'totalSellProfit', 'totalDamageAmount');
+    
+            $mpdf = setPdf();
+            $html = view('bs-account.chart-account-index-pdf', $data)->render();
+            $mpdf->WriteHTML($html);
+    
+            return response($mpdf->Output('chart-account.pdf', 'I'))->header('Content-Type', 'application/pdf');
+        }
+    
+        return view('bs-account.chart-account-index', compact('totalAssets', 'currentCashAmount', 'currentBankAmount', 'totalReceivableAmount', 'totalPurchaseStock', 'totalPayableAmount', 'incomes', 'employeePayableSalary', 'totalSellProfit', 'totalDamageAmount'));
+    }
+    
+
+
+
+
+
+    public function journalCreate()
+    {
+
+        $bsType = BsType::all();
+
+        return view('bs-account.journal-create', compact('bsType'));
+    }
+
+    public function journalStore(Request $request)
+    {
+        $request->validate([
+            'entry_date' => 'required|date',
+            // 'code' => 'required|string|unique:journal_entries,code',
+            'description' => 'required|string',
+            'accounts' => 'required|array|min:1',
+            'accounts.*.account_type' => 'required|exists:bs_types,id',
+            'accounts.*.debit' => 'nullable|numeric|min:0',
+            'accounts.*.credit' => 'nullable|numeric|min:0',
+        ]);
+
+        $journalEntryData = new JournalEntry();
+        // $journalEntryData->code = $request->code;
+        $journalEntryData->description = $request->description;
+        $journalEntryData->entry_date = $request->entry_date;
+        $journalEntryData->entry_by = auth()->user()->id;
+        $journalEntryData->amount = 0;
+        $journalEntryData->save();
+
+        $totalCredit = 0;
+
+        foreach ($request->accounts as $acc) {
+
+            $bsType = BsType::find($acc['account_type']);
+
+            // if (!$bsType) {
+            //     return back()->with('error', 'Invalid account type selected.');
+            // }
+
+            $totalCredit += $acc['credit'] ?? 0;
+
+            $data = new BsAccount();
+            $data->journal_entry_id = $journalEntryData->id;
+            $data->account_type = $bsType->type;
+            $data->account_sub_type = $bsType->id;
+            $data->debit = $acc['debit'] ?? 0;
+            $data->credit = $acc['credit'] ?? 0;
+            $data->save();
+        }
+
+        $journalEntryData->amount = $totalCredit;
+        $journalEntryData->save();
+
+        $notify[] = ['success', 'Journal entry saved successfully.'];
+        return to_route('bs.account.journal.index')->withNotify($notify);
+    }
+}

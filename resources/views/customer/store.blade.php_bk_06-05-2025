@@ -1,0 +1,114 @@
+@extends('layouts.vertical', ['title' => 'Datatables'])
+
+@section('css')
+    @vite(['node_modules/datatables.net-bs5/css/dataTables.bootstrap5.min.css', 'node_modules/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css', 'node_modules/datatables.net-buttons-bs5/css/buttons.bootstrap5.min.css', 'node_modules/datatables.net-select-bs5/css/select.bootstrap5.min.css', 'node_modules/mohithg-switchery/dist/switchery.min.css'])
+@endsection
+
+@section('content')
+    <!-- Start Content-->
+    <div class="container-fluid">
+
+        @include('layouts.shared.page-title', ['title' => 'Create Customer', 'subtitle' => 'Customer'])
+
+        <div class="row justify-content-center">
+            <div class="col-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="header-title mb-3">{{ $pageTitle }}</h4>
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <form
+                                    action="{{ isset($customer) ? route('customer.store', $customer->id) : route('customer.store') }}"
+                                    method="POST">
+                                    @csrf
+                                    <div class="mb-3">
+                                        <label for="simpleinput" class="form-label">Name</label>
+                                        <input type="text" id="simpleinput" class="form-control" placeholder="Name"
+                                            name="name" required
+                                            value="{{ old('name', isset($customer) ? $customer->name : '') }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="example-select" class="form-label">Customer Type</label>
+                                        <select class="form-select" id="example-select" name="type" required>
+                                            <option value="">Choose One</option>
+                                            @foreach ($types as $item)
+                                                <option value="{{ $item->id }}" @selected(isset($customer) ? ($item->id == $customer->type ? true : false) : false)>
+                                                    {{ $item->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="compnay-name" class="form-label">Company Name</label>
+                                        <input type="text" id="compnay-name" class="form-control"
+                                            placeholder="Company Name" name="company" required
+                                            value="{{ old('company', isset($customer) ? $customer->company : '') }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="example-mobile" class="form-label">Mobile</label>
+                                        <input type="number" id="example-mobile" class="form-control" name="mobile"
+                                            placeholder="Mobile" required
+                                            value="{{ old('name', isset($customer) ? $customer->mobile : '') }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="example-email" class="form-label">Email</label>
+                                        <input type="email" id="example-email" name="email" class="form-control"
+                                            placeholder="Email"
+                                            value="{{ old('name', isset($customer) ? $customer->email : '') }}">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="example-textarea" class="form-label">Address</label>
+                                        <textarea class="form-control" id="example-textarea" placeholder="Address" rows="5" name="address" required> {{ old('address', isset($customer) ? $customer->address : '') }} </textarea>
+                                    </div>
+
+                                    <div class="mb-3 d-flex">
+                                        <label for="status">Status</label>
+                                        <label class="switch m-0">
+                                            <input id="status" type="checkbox" class="toggle-switch" name="status"
+                                                @checked(isset($customer) ? ($customer->status == 1 ? true : false) : true)>
+                                            <span class="slider round"></span>
+                                        </label>
+                                    </div>
+                                    <div class="text-end">
+                                        <button type="submit"
+                                            class="btn btn-primary waves-effect waves-light">{{ isset($customer) ? 'Update Customer' : 'Add New Customer' }}</button>
+                                    </div>
+                                </form>
+                            </div> <!-- end col -->
+                        </div>
+                        <!-- end row-->
+
+                    </div> <!-- end card-body -->
+                </div> <!-- end card -->
+            </div><!-- end col -->
+        </div>
+        <!-- end row -->
+    </div> <!-- container -->
+
+    <x-confirmation-modal></x-confirmation-modal>
+@endsection
+
+@section('script')
+    @vite(['resources/js/app.js', 'resources/js/pages/datatables.init.js', 'resources/js/pages/form-advanced.init.js'])
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            $('#paymentMethod').on('change', function() {
+                if ($(this).val() == 2) {
+                    $('#bankInfo').removeClass('d-none');
+                    $('#bank_id').prop('required', true);
+                    $('#withdrawer_name').prop('required', true);
+                } else {
+                    $('#bankInfo').addClass('d-none');
+                    $('#bank_id').prop('required', false);
+                    $('#withdrawer_name').prop('required', false);
+                }
+            });
+        });
+    </script>
+@endsection

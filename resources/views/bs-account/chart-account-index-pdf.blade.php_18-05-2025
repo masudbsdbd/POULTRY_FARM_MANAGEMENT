@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Balance Sheet</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            background: white;
+            padding: 20px;
+            margin: auto;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h2 {
+            text-align: center;
+        }
+        .header {
+            text-align: center;
+            font-weight: bold;
+            padding: 10px;
+        }
+        .section {
+            margin-top: 20px;
+        }
+        .section-title {
+            background: #888;
+            color: white;
+            padding: 5px;
+            font-weight: bold;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #eee;
+        }
+        .total {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Balance Sheet</h2>
+        <p class="header">As of {{ request('date') }} </p>
+        
+        <div class="section">
+            <div class="section-title">Assets</div>
+            <table>
+                <tr><th>Current Assets</th><th>Amount</th></tr>
+                <tr><td>Cash</td><td>{{ $currentCashAmount }}</td></tr>
+                <tr><td>Bank</td><td>{{ $currentBankAmount }}</td></tr>
+                <tr><td>Accounts Receivable</td><td>{{ $totalReceivableAmount }}</td></tr>
+                <tr><td>Inventory</td><td>{{ $totalPurchaseStock - $totalDamageAmount }}</td></tr>
+                <tr class="total"><td>Total Current Assets</td><td>{{ $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock }}</td></tr>
+            </table>
+            <table>
+                <tr><th>Fixed Assets</th><th>Amount</th></tr>
+                <tr class="total"><td>Total Fixed Assets</td><td>{{ $totalAssets }}</td></tr>
+                <tr class="total"><td>Total Assets</td><td>{{ $totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock }}</td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Liabilities</div>
+            <table>
+                <tr><th>Liabilities</th><th>Amount</th></tr>
+                <tr><td>Account Payables</td><td>{{ $totalPayableAmount - $employeePayableSalary }}</td></tr>
+                <tr><td>Employee Salary</td><td>{{ $employeePayableSalary }}</td></tr>
+                
+                <tr class="total"><td>Total Liabilities</td><td>{{ ($totalPayableAmount - $employeePayableSalary) + $employeePayableSalary }}</td></tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Equity</div>
+            <table>
+                <tr><th>Equity</th><th>Amount</th></tr>
+
+                <tr><td>Owner's Capital</td><td>{{  ((  $totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock ) - ( $incomes + $totalSellProfit ) - (($totalPayableAmount - $employeePayableSalary) + $employeePayableSalary))  }}</td></tr>
+
+                <tr><td>Other's Earnings</td><td>{{ $incomes + $totalSellProfit }}</td></tr>
+
+                <tr class="total"><td>Liabilities & Equity Total</td><td>{{ ( ((($totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock ) - ( $incomes + $totalSellProfit ) - (($totalPayableAmount - $employeePayableSalary) + $employeePayableSalary)) + ($incomes + $totalSellProfit))  + ( ($totalPayableAmount - $employeePayableSalary) + $employeePayableSalary )) }}</td></tr>
+
+
+                <!-- <tr class="total"><td>Liabilities & Equity Total</td><td>{{ ($employeePayableSalary - ($totalPayableAmount - $employeePayableSalary)) + ($totalAssets + $currentCashAmount + $currentBankAmount + $totalReceivableAmount + $totalPurchaseStock) - $employeePayableSalary - ($totalPayableAmount - $employeePayableSalary) + ($incomes + $totalSellProfit)   }}</td></tr> -->
+
+
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+

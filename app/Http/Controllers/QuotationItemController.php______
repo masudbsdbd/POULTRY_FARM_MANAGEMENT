@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\QuotationItem;
+use App\Models\Quotation;
+use App\Models\Product;
+use App\Models\Customer;
+
+class QuotationItemController extends Controller
+{
+    //
+    public function index()
+    {
+        $pageTitle = 'Quotation Item List';
+        $items = QuotationItem::with('quotation', 'quotation.customer', 'product')
+                    ->latest()
+                    ->paginate(gs()->pagination);
+
+        $itemsGrouped = $items->getCollection()->groupBy('quotation_id');
+
+        $items->setCollection($itemsGrouped);
+
+        return view('quotation-item.index', compact('pageTitle','items'));
+    }
+
+    public function create()
+    {
+        $pageTitle = 'Create Quotation Item';
+        $quotations = Quotation::whereStatus(1)->latest()->get();
+        $products = Product::latest()->get();
+        $customers = Customer::whereStatus(1)->latest()->get();
+        return view('quotation-item.create', compact('pageTitle','quotations','products','customers'));
+    }
+
+        
+    public function store(Request $request)
+    {
+        $request->validate([
+            'products'      => 'required|array',
+            'products.*'    => 'required|integer',
+            'description'   => 'nullable|array',
+            'description.*' => 'nullable|string|max:255',
+            'qty'           => 'required|array',
+            'qty.*'         => 'required|numeric',
+            'unitPrice'     => 'required|array',
+            'unitPrice.*'   => 'required|numeric',
+            'priceTotal'    => 'required|array',
+            'priceTotal.*'  => 'required|numeric',
+        ]);
+
+        $quotationId = $request->quotation_id; 
+
+        foreach ($request->products as $index => $productId) {
+            $quotationItem = new QuotationItem();
+            $quotationItem->quotation_id = $quotationId;
+            $quotationItem->product_id   = $productId;
+            $quotationItem->description  = $request->description[$index] ?? null;
+            $quotationItem->qty          = $request->qty[$index];
+            $quotationItem->unit_price   = $request->unitPrice[$index];
+            $quotationItem->total        = $request->priceTotal[$index];
+            $quotationItem->save();
+        }
+
+        return redirect()->route('quotation.item.index')
+                        ->with('success', 'Quotation Items have been saved successfully');
+    }
+
+
+    
+
+
+
+}

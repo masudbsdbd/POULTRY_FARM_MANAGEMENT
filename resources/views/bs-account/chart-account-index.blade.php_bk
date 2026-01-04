@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Balance Sheet</title>
+</head>
+<body>
+
+    <h1>Balance Sheet</h1>
+
+    <br>
+
+    <h3>Assets:</h3>
+
+    @foreach ($allAssets as $item)
+        <p>{{ $item['name'] }}: {{ $item['net_amount'] }} Tk</p>
+    @endforeach
+    <hr>
+    <h3>Total Assets: {{ $totalAssets }} Tk</h3> 
+    <br>
+
+    <h3>Libilities:</h3>
+    @foreach ($allLibilities as $item)
+        <p>{{ $item['name'] }}: {{ $item['net_amount'] }} Tk</p>
+    @endforeach
+    <hr>
+    <h3>Total Libilities: {{ $totalLibilities }} Tk</h3> 
+    <br>
+
+    <h3>Equity:</h3>
+    @foreach ($allEquity as $item)
+        <p>{{ $item['name'] }}: {{ $item['net_amount'] }} Tk</p>
+    @endforeach
+    <hr>
+    <h3>Total Equity: {{ $totalEquity }} Tk</h3> 
+    <br>
+
+    <br>
+    <h3>Libilities + Equty : {{$totalLibilities + $totalEquity}} TK</h3>
+    
+
+</body>
+</html>

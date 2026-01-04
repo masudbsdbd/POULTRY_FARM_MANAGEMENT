@@ -1,0 +1,372 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Bank;
+use App\Models\BsAccount;
+use App\Models\BsType;
+use App\Models\Employee;
+use App\Models\EmployeeMonthlyTransaction;
+use App\Models\EmployeeTransaction;
+use App\Models\JournalEntry;
+use App\Models\Payable;
+use App\Models\Receivable;
+use Illuminate\Http\Request;
+use Carbon\Carbon;
+// use Illuminate\Support\Facades\DB;
+
+class EmployeeTransactionController extends Controller
+{
+    public function __construct()
+    {
+        $this->middleware('permission:employee-transaction-list', ['only' => ['index']]);
+        $this->middleware('permission:employee-transaction-create|employee-transaction-edit', ['only' => ['store']]);
+        $this->middleware('permission:employee-transaction-create', ['only' => ['create']]);
+        $this->middleware('permission:employee-transaction-edit', ['only' => ['edit']]);
+        $this->middleware('permission:employee-transaction-delete', ['only' => ['delete']]);
+    }
+
+    public function create()
+    {
+        $pageTitle = 'Pay Salary to Employee';
+        $employes  = Employee::whereStatus(1)->latest()->get();
+        $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
+        return view('employee-transaction.store', compact('pageTitle', 'employes', 'banks'));
+    }
+
+    public function index()
+    {
+        $pageTitle = "Employee's Transaction";
+
+        $transactions = EmployeeMonthlyTransaction::select('employee_id')
+            ->selectRaw('COALESCE(SUM(total_paid), 0) as total_received')
+            ->selectRaw('COALESCE(SUM(punishment), 0) as total_punishment')
+            ->selectRaw('COALESCE(SUM(due), 0) as total_due')
+            ->selectRaw('COALESCE(SUM(advance), 0) as total_advance')
+            ->notDeleted()
+            ->groupBy('employee_id')
+            ->get();
+
+        // return $transactions;
+
+        return view('employee-transaction.index', compact('pageTitle', 'transactions'));
+    }
+
+    public function monthlyTransactionDetails($id)
+    {
+        $pageTitle = 'Employee Monthly Payment Details';
+        $informations  = EmployeeMonthlyTransaction::whereEmployeeId($id)->notDeleted()->get();
+        $employee = Employee::whereId($id)->first();
+        return view('employee-transaction.monthly-details', compact('pageTitle', 'informations', 'employee'));
+    }
+
+    public function transactionDetails($date, $id)
+    {
+        $pageTitle = 'Employee Payment Details';
+        $employee = Employee::whereId($id)->first();
+
+        $month = Carbon::createFromFormat('Y-m', $date)->month;
+        $year = Carbon::createFromFormat('Y-m', $date)->year;
+
+        $transactions = EmployeeTransaction::whereEmployeeId($id)->whereYear('salary_date', $year)
+            ->whereMonth('salary_date', $month)
+            ->notDeleted()
+            ->get();
+
+        return view('employee-transaction.details', compact('pageTitle', 'transactions', 'employee', 'date'));
+    }
+
+    public function payment(Request $request)
+    {
+        $datetime = $request->salary_date;
+        $month = date('Y-m', strtotime($datetime));
+        $employee = Employee::find($request->employee_id);
+
+        $trExist = EmployeeMonthlyTransaction::where('employee_id', $employee->id)
+            ->where('month', $month)
+            ->first();
+
+        if (!isset($trExist)) {
+            $notify[] = ['error', 'Please insert liability first to pay salary.'];
+            return back()->withNotify($notify);
+        }
+
+        $monthlyTransaction                   = $trExist;
+        $monthlyTransaction->employee_id      = $employee->id;
+        $monthlyTransaction->month            = $month;
+        $monthlyTransaction->punishment      += $request->punishment ?? 0;
+        $monthlyTransaction->net_salary       = $employee->salary + $employee->conveyance;
+        $monthlyTransaction->salary_amount    = $monthlyTransaction->net_salary - $monthlyTransaction->punishment;
+        $monthlyTransaction->total_paid      += $request->balance ?? 0;
+        $monthlyTransaction->due              = isset($trExist) ? $trExist->due     :  0;
+        $monthlyTransaction->advance          = isset($trExist) ? $trExist->advance :  0;
+        $monthlyTransaction->is_deleted       = 0;
+        $monthlyTransaction->save();
+
+        $dueAdvance = $monthlyTransaction->salary_amount - $monthlyTransaction->total_paid;
+
+        if ($dueAdvance > 0) {
+            $monthlyTransaction->due = $dueAdvance;
+        } else {
+            $monthlyTransaction->advance  = abs($dueAdvance);
+        }
+
+        $monthlyTransaction->save();
+
+
+        // if ($monthlyTransaction->due > 0) {
+
+        //     $bsSubTypeOne = BsType::find(6); // Owner’s Capital
+        //     $bsSubTypeTwo = BsType::find(10); // Salary Payable
+
+        //     $journalEntryData = new JournalEntry();
+        //     $journalEntryData->description = 'Employee Payable of ' . showAmount($monthlyTransaction->due) . ' Tk. Liability journal entry.';
+        //     $journalEntryData->entry_date = now();
+        //     $journalEntryData->entry_by = auth()->user()->id;
+        //     $journalEntryData->amount = $monthlyTransaction->due;
+        //     $journalEntryData->save();
+
+        //     $creditEntry = new BsAccount();
+        //     $creditEntry->journal_entry_id = $journalEntryData->id;
+        //     $creditEntry->account_type = $bsSubTypeOne->type;
+        //     $creditEntry->account_sub_type = $bsSubTypeOne->id;
+        //     $creditEntry->credit = 0;
+        //     $creditEntry->debit = $monthlyTransaction->due;
+        //     $creditEntry->save();
+
+        //     $creditEntry = new BsAccount();
+        //     $creditEntry->journal_entry_id = $journalEntryData->id;
+        //     $creditEntry->account_type = $bsSubTypeTwo->type;
+        //     $creditEntry->account_sub_type = $bsSubTypeTwo->id;
+        //     $creditEntry->credit = $monthlyTransaction->due;
+        //     $creditEntry->debit = 0;
+        //     $creditEntry->save();
+        // }
+
+        $transaction                          = new EmployeeTransaction();
+        $transaction->employee_id             = $employee->id;
+        $transaction->monthly_transaction_id  = $monthlyTransaction->id;
+        $transaction->salary_date             = $request->salary_date;
+        $transaction->received_amount         = $request->balance ?? 0;
+        $transaction->punishment              = $request->punishment ?? 0;
+        $transaction->description             = $request->description;
+        $transaction->entry_by                = auth()->user()->id;
+        $transaction->save();
+
+        // == ===== == Payable Account Start ==>
+        $payableData = Payable::where('employee_id', $employee->id)->where('payables_head_id', 3)->first();
+        if ($payableData) {
+            $payableData->payable_amount -= $request->balance;
+            $payableData->save();
+
+
+            if ($payableData->payable_amount < 0) {
+
+
+                $payableData->payable_amount = 0;
+                $payableData->save();
+
+                //  == ===== == Receivable Account Start ==>
+                $receivableData = Receivable::where('employee_id', $employee->id)->where('receivable_head_id', 2)->first();
+                if ($receivableData) {
+                    $receivableData->receivable_amount = $monthlyTransaction->advance;
+                    $receivableData->save();
+                }
+                // == ===== == Receivable Account End ==>
+            }
+        }
+        // == ===== == Payable Account End ==>
+
+
+
+
+        $accArr = [
+            'type'              => 12,
+            'debit'             => $request->balance,
+            'description'       => "Company give salary to empoyee" . $employee->name . " amount of " . showAmount($request->balance) . " Tk.",
+            'employee_id'       => $employee->id,
+            'payment_method'    => $request->payment_method,
+        ];
+
+        $account = updateAcc($accArr, 'NTR', 0, 12);
+
+        if ($request->payment_method == 2) {
+
+            $bankTrArr = [
+                'account_id'       => $account->id,
+                'withdrawer_name'  => $request->withdrawer_name,
+                'debit'            => $request->balance,
+                'description'      => "Paid Salary amount of " . showAmount($request->balance) . " Tk to the employee " . $employee->name,
+                'bank_id'          => $request->bank_id,
+                'check_no'         => $request->check_no,
+            ];
+
+            bankTr($account, $bankTrArr);
+        }
+
+        $notify[] = ['success', 'Payment completed successfully'];
+        return to_route('employee.transaction.index')->withNotify($notify);
+    }
+
+    public function salaryLiability(Request $request, $id)
+    {
+        $currentMonth = Carbon::createFromFormat('F Y', $request->month)->format('Y-m');
+        $employee = Employee::find($id);
+        $hasEntriy = EmployeeMonthlyTransaction::where('employee_id', $id)->where('month', $currentMonth)->first();
+
+        if (!$hasEntriy) {
+
+
+            // ======================== Check if there is any advance amount in this month Start ========================   
+            $employeeNetSalary = $employee->salary + $employee->conveyance;
+
+            $findPrviewasCheck = EmployeeMonthlyTransaction::where('employee_id', $id)->get();
+            $totalDueCount = $findPrviewasCheck->sum('due');
+            $totalPaidCount = $findPrviewasCheck->sum('total_paid');
+            $advanceAmountCount = $totalPaidCount - $totalDueCount;
+
+            if($advanceAmountCount < 0){
+            // // // == ===== == Payable Account Start ==>
+            $payableData = Payable::where('employee_id', $id)->where('payables_head_id', 3)->first();
+            if ($payableData) {
+                $payableData->payable_amount += $employeeNetSalary;
+                $payableData->description = "Employee salary payable amount of " . showAmount($payableData->payable_amount);
+                $payableData->save();
+            }
+            // // // == ===== == Payable Account End ==>
+            }else{
+                
+                $employeeCurrentSalaryDue = $employeeNetSalary - $advanceAmountCount;
+                // dd($advanceAmountCount );
+
+
+                //  == ===== == Receivable Account Start ==>
+                $receivableData = Receivable::where('employee_id', $id)->where('receivable_head_id', 2)->first();
+                if ($receivableData) {
+                    $receivableData->receivable_amount -= $advanceAmountCount;
+                    $receivableData->save();
+                }
+                // == ===== == Receivable Account End ==>
+
+                // // // == ===== == Payable Account Start ==>
+            $payableData = Payable::where('employee_id', $id)->where('payables_head_id', 3)->first();
+            if ($payableData) {
+                $payableData->payable_amount += $employeeCurrentSalaryDue;
+                $payableData->description = "Employee salary payable amount of " . showAmount($payableData->payable_amount);
+                $payableData->save();
+            }
+            // // // == ===== == Payable Account End ==>
+            }
+
+            // dd($totalPaidCount, $totalDueCount, $advanceAmountCount);
+
+            // ======================== Check if there is any advance amount in this month end ========================
+
+
+
+
+
+
+
+            $hasEntriy = new EmployeeMonthlyTransaction();
+            $hasEntriy->employee_id      = $id;
+            $hasEntriy->month            = $currentMonth;
+            $hasEntriy->punishment       = 0;
+            $hasEntriy->net_salary       = $employee->salary + $employee->conveyance;
+            $hasEntriy->salary_amount    = $hasEntriy->net_salary;
+            $hasEntriy->total_paid       = 0;
+            $hasEntriy->due              = $hasEntriy->salary_amount - $hasEntriy->total_paid;
+            $hasEntriy->is_deleted       = 0;
+            $hasEntriy->save();
+
+            // // // // == ===== == Payable Account Start ==>
+            // $payableData = Payable::where('employee_id', $id)->where('payables_head_id', 3)->first();
+            // if ($payableData) {
+            //     $payableData->payable_amount += $hasEntriy->salary_amount;
+            //     $payableData->description = "Employee salary payable amount of " . showAmount($payableData->payable_amount);
+            //     $payableData->save();
+            // }
+            // // // // == ===== == Payable Account End ==>
+        } else {
+            $notify[] = ['error', 'Salary Payable Liability already created'];
+            return back()->withNotify($notify);
+        }
+
+        $notify[] = ['success', 'Salary Payable Liability has been created successfully'];
+        return to_route('employee.index')->withNotify($notify);
+    }
+
+    public function monthlyTransactionDelete($id)
+    {
+        $transaction = EmployeeMonthlyTransaction::find($id);
+
+        foreach ($transaction->employeeTransactions as $item) {
+            $item->is_deleted = 1;
+            $item->save();
+        }
+
+        $transaction->net_salary       = 0;
+        $transaction->punishment       = 0;
+        $transaction->salary_amount    = 0;
+        $transaction->total_paid       = 0;
+        $transaction->due              = 0;
+        $transaction->advance          = 0;
+        $transaction->is_deleted = 1;
+        $transaction->save();
+
+        $notify[] = ['success', 'Transaction has been successfully deleted'];
+        return back()->withNotify($notify);
+    }
+
+    public function transactionDelete($id)
+    {
+        $transaction = EmployeeTransaction::find($id);
+
+        $datetime = $transaction->salary_date;
+        $month = date('Y-m', strtotime($datetime));
+
+        $monthlyTransaction = EmployeeMonthlyTransaction::where('employee_id', $transaction->employee_id)
+            ->where('month', $month)
+            ->first();
+
+        $transaction->is_deleted = 1;
+        $transaction->save();
+
+        $total_paid = 0;
+        $total_punishment = 0;
+        $final_salary = 0;
+        $total_due = 0;
+        $total_advance = 0;
+
+        foreach ($monthlyTransaction->empTrNotDeleted as $item) {
+            $total_paid += $item->received_amount;
+            $total_punishment += $item->punishment;
+        }
+
+        $final_salary = $monthlyTransaction->net_salary - $total_punishment;
+
+        $monthlyTransaction->punishment       = $total_punishment;
+        $monthlyTransaction->salary_amount    = $final_salary;
+        $monthlyTransaction->total_paid       = $total_paid;
+        $monthlyTransaction->save();
+
+        if ($total_paid > $monthlyTransaction->salary_amount) {
+            $total_advance = $total_paid - $monthlyTransaction->salary_amount;
+        } else {
+            $total_due = $monthlyTransaction->salary_amount - $total_paid;
+        }
+
+        $monthlyTransaction->due              = $total_due;
+        $monthlyTransaction->advance          = $total_advance;
+        $monthlyTransaction->save();
+
+
+        if ($monthlyTransaction->empTrNotDeleted->count() == 0) {
+            $monthlyTransaction->is_deleted = 1;
+            $monthlyTransaction->save();
+        }
+
+        $notify[] = ['success', 'Transaction has been successfully deleted'];
+        return back()->withNotify($notify);
+    }
+}

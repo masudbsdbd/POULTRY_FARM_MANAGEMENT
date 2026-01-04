@@ -1,0 +1,466 @@
+@extends('layouts.vertical', ['title' => 'Datatables'])
+
+@section('css')
+    @vite(['node_modules/flatpickr/dist/flatpickr.min.css', 'node_modules/select2/dist/css/select2.min.css', 'node_modules/datatables.net-bs5/css/dataTables.bootstrap5.min.css', 'node_modules/datatables.net-responsive-bs5/css/responsive.bootstrap5.min.css', 'node_modules/datatables.net-buttons-bs5/css/buttons.bootstrap5.min.css', 'node_modules/datatables.net-select-bs5/css/select.bootstrap5.min.css'])
+@endsection
+
+@section('content')
+    <!-- Start Content-->
+    <div class="container-fluid">
+
+        @include('layouts.shared.page-title', [
+            'title' => $pageTitle,
+            'subtitle' => $pageTitle,
+        ])
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="header-title">{{ $pageTitle }}</h4>
+
+                        <p>
+                            @if (request('date'))
+                                Search Date: ( {{ request('date') }} )
+                            @elseif(request('range'))
+                                Search Date: ( {{ request('range') }} )
+                            @endif
+                        </p>
+
+                        <div class="button-list">
+                            <form id="myForm" action="" method="get">
+
+                                <input type="hidden" name="action" id="form-action" value="search">
+
+                                <div class="row justify-content-end">
+                                    <!-- Start Date Field -->
+
+                                    <div class="col-md-3">
+                                        <p class="fw-bold text-muted">Search Head</p>
+                                        <select class="form-select" id="head-select" name="head">
+                                            <option value="">Select Head</option>
+                                            @foreach ($receivableHeads as $item)
+                                                <option value="{{ $item->id }}">{{ $item->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    <div class="col-md-2 p-0">
+                                        <p class="fw-bold text-muted">Search Type</p>
+                                        <select class="form-select" id="type-select" name="type">
+                                            <option value="">Select Type</option>
+                                            <option value="1" @selected(request('type') == '1')>Single Date</option>
+                                            <option value="2" @selected(request('type') == '2')>Date Range</option>
+                                        </select>
+                                    </div>
+
+
+
+                                    <div class="col-md-4">
+                                        <div class="basicDatepicker {{ request('range') ? 'd-none' : '' }}">
+                                            <p class="fw-bold text-muted">Select Date</p>
+                                            <div class="input-group input-group-merge">
+                                                <input type="text" name="date" id="basic-datepicker"
+                                                    class="form-control" placeholder="Select Date"
+                                                    value="{{ old('date', request('date')) }}">
+                                                <div class="input-group-text clear-btn" style="cursor: pointer;">X</div>
+                                            </div>
+                                        </div>
+
+
+                                        <div class="rangeDatepicker {{ request('range') ? '' : 'd-none' }}">
+                                            <p class="fw-bold text-muted">Choose Date Range</p>
+                                            <div class="input-group input-group-merge">
+                                                <input type="text" id="range-datepicker" class="form-control"
+                                                    name="range" placeholder="Ex. 2018-10-03 to 2018-10-10"
+                                                    value="{{ old('date', request('range')) }}">
+                                                <div class="input-group-text clear-btn" style="cursor: pointer;">X</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Submit Buttons -->
+                                    <div class="col-md-3">
+                                        <div class="row">
+                                            <div class="col-md-4 ps-0">
+                                                <button type="submit" class="btn btn-primary w-100"
+                                                    onclick="document.getElementById('form-action').value='search'"
+                                                    style="margin-top: 36px;">
+                                                    <i class="mdi mdi-search-web"></i> Search
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4 ps-0">
+                                                <button type="button" class="btn btn-success w-100 printBtn"
+                                                    style="margin-top: 36px;">
+                                                    <i class="mdi mdi-printer"></i> Print
+                                                </button>
+                                            </div>
+                                            <div class="col-md-4 ps-0">
+                                                <a href="{{ route('accounts.receivable.create') }}"
+                                                    style="margin-top: 36px;"
+                                                    class="mb-2 btn btn-primary waves-effect waves-light"><i
+                                                        class="mdi mdi-plus"></i> Add</a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </form>
+                        </div>
+
+                        <p></p>
+
+                        <table id="basic-datatables" class="table dt-responsive nowrap w-100">
+                            <thead>
+                                <tr>
+                                    <th class="text-center">SL</th>
+                                    <th class="text-center">Date</th>
+                                    <th class="text-center">Customer</th>
+                                    <th class="text-center">Employee</th>
+                                    <th class="text-center">Invoice Number</th>
+                                    <th class="text-center">Account's Head</th>
+                                    {{-- <th class="text-center">Due Amount</th> --}}
+                                    {{-- <th class="text-center">Paid Amount</th> --}}
+                                    {{-- <th class="text-center">Supplier Advance Amount</th> --}}
+                                    {{-- <th class="text-center">Employee Advance Amount</th> --}}
+                                    <th class="text-center">Entry Type</th>
+                                    <th class="text-center">Effective Debit/Credit</th>
+                                    <th class="text-center">Receivable Amount</th>
+                                    <th class="text-center">Effective Amount</th>
+                                    <th class="text-end">Action</th>
+                                </tr>
+                            </thead>
+
+
+                            <tbody>
+                                @php
+                                    $totalDueAmount = 0;
+                                    $totalPaidAmount = 0;
+                                    $totalAdvanceAmount = 0;
+                                    $totalReceivableAmount = 0;
+                                    $totalEffectiveAmount = 0;
+                                    $serial = 1;
+                                @endphp
+                                @foreach ($receivables as $item)
+                                    @php
+                                        $totalDueAmount += $item->due_amount;
+                                        $totalPaidAmount += $item->paid_amount;
+                                        $totalAdvanceAmount += $item->supplier_advance_amount;
+                                        $totalReceivableAmount += $item->receivable_amount;
+                                        $totalEffectiveAmount += $item->effective_amount;
+                                    @endphp
+                                    <tr>
+                                        <td class="text-center">{{ $loop->iteration }}</td>
+                                        <td class="text-center">{{ showDateTime($item->created_at) }}</td>
+                                        <td class="text-center">
+                                                @if($item->sell && $item->sell->customer)
+                                                    {{ $item->sell->customer->name }}
+                                                @elseif($item->customer)
+                                                    {{ $item->customer->name }}
+                                                @else
+                                                    ---
+                                                @endif
+                                            </td>
+                                            <td class="text-center">
+                                                @if($item->employee_id)
+                                                    {{ $item->employee->name }}
+                                                @else
+                                                    ---
+                                                @endif  
+                                                </td>
+
+                                        <td class="text-center">
+                                            {{ $item->sell && $item->sell ? $item->sell->invoice_no : '---' }}
+                                        </td>
+                                        <td class="text-center">
+                                            <span
+                                                class="badge badge-soft-secondary">{{ $item->receivableHead->name }}</span>
+                                        </td>
+                                        {{-- <td class="text-center">{{ showAmount($item->due_amount) }} Tk</td> --}}
+                                        {{-- <td class="text-center">{{ showAmount($item->paid_amount) }} Tk</td> --}}
+                                        {{-- <td class="text-center">{{ showAmount($item->supplier_advance_amount) }} Tk</td> --}}
+                                        {{-- <td class="text-center">{{ showAmount($item->employee_advance_amount) }} Tk</td> --}}
+                                        <td class="text-center">
+                                            @if ($item->entry_type == 0)
+                                                <span class="badge badge-soft-dark">manual</span>
+                                            @else
+                                                <span class="badge badge-soft-dark">journal</span>
+                                            @endif
+                                        </td>
+                                        <td class="text-center">
+                                        @if(isset($item->debit_or_credit))
+                                        @if($item->debit_or_credit == 'debit')
+                                        <span class="badge badge-soft-danger">Debit</span>
+                                        @else
+                                        <span class="badge badge-soft-success">Credit</span>
+                                        @endif
+                                        @else
+                                        ---
+                                        @endif
+                                        </td>
+                                        <td class="text-center">{{ showAmount($item->receivable_amount) }} Tk</td>
+                                        <td class="text-center">{{ showAmount($item->effective_amount) }} </td>
+
+                                        <td class="text-end">
+
+                                            @if ($item->receivable_head_id == 1 && $item->sell_id != null)
+                                                <button title="Due Payment" type="button"
+                                                    class="btn btn-success waves-effect waves-light paymentBtn  {{ $item->receivable_amount > 0 ? '' : 'disabled' }}"
+                                                    data-suppliername="" data-due=""
+                                                    data-action="{{ route('sell.due', $item->sell_id) }}"><i
+                                                        class="mdi mdi-cash-multiple"></i></button>
+                                            @elseif ($item->receivable_head_id == 1 && $item->sell_id == null)
+
+                                            @elseif($item->receivable_head_id == 2 && $item->employee_id != null)
+                                                
+                                            @elseif($item->receivable_head_id == 2 && $item->employee_id == null)
+                                            @elseif($item->receivable_head_id == 3)
+                                            
+                                            @elseif($item->receivable_head_id == 4)
+
+                                            <button title="Due Payment" type="button"
+                                                    class="btn btn-success waves-effect waves-light paymentBtn  {{ $item->receivable_amount > 0 ? '' : 'disabled' }}"
+                                                    data-suppliername="" data-due=""
+                                                    data-action="{{ route('accounts.receivable.customer.due.pay', $item->id) }}"><i
+                                                        class="mdi mdi-cash-multiple"></i></button>
+                                         
+                                            @else
+                                                <button title="Due Payment" type="button"
+                                                    class="btn btn-success waves-effect waves-light paymentBtn  {{ $item->receivable_amount > 0 ? '' : 'disabled' }}"
+                                                    data-suppliername="" data-due=""
+                                                    data-action="{{ route('accounts.receivable.due.pay', $item->id) }}"><i
+                                                        class="mdi mdi-cash-multiple"></i></button>
+                                            @endif
+
+                                            <button title="View" type="button"
+                                            class="btn btn-primary waves-effect waves-light sellDetailBtn"
+                                            data-description="{{ $item->description }}"><i class="mdi mdi-eye"></i></button>
+                                        </td>
+                                    </tr>
+                                @endforeach
+
+                            </tbody>
+                            <tfoot>
+                                <tr style="font-size: 16px;">
+                                    <td class="fw-bold">Closing Balance: </td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center"></td>
+                                    {{-- <td class="text-center"></td> --}}
+                                    {{-- <td class="text-center"><strong>{{ $totalDueAmount }} Tk</strong></td> --}}
+                                    {{-- <td class="text-center"><strong>{{ $totalAdvanceAmount }} Tk</strong></td> --}}
+                                    <td class="text-center"></td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center"><strong>{{ $totalReceivableAmount }} Tk</strong></td>
+                                    <td class="text-center"><strong>{{ $totalEffectiveAmount }} Tk</strong></td>
+                                    <td class="text-center"></td>
+
+
+                                </tr>
+                                {{-- <tr style="font-size: 16px;">
+                                    <td class="fw-bold">Total Receivable Amount: </td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center"></td>
+                                    <td class="text-center">
+                                        <strong>{{ $totalDueAmount + $totalAdvanceAmount + $totalReceivableAmount }}
+                                            Tk</strong>
+                                    </td>
+                                </tr> --}}
+
+                            </tfoot>
+                        </table>
+
+                        <div class="d-flex justify-content-end mt-3">{{ $receivables->links() }}</div>
+                    </div> <!-- end card body-->
+                </div> <!-- end card -->
+            </div><!-- end col-->
+        </div>
+        <!-- end row-->
+    </div> <!-- container -->
+
+    <div id="purchasePaymentModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="text-center mt-2 mb-4">
+                        <h4>Due payment for this Purchase from <span class="supplierName"></span></h4>
+                    </div>
+                    <form id="paymentForm" class="px-3" action="" method="POST">
+                        @csrf
+                        <h4>Payment Method and Type</h4>
+                        <div class="my-3"><label class="form-label">Payment Amount</label>
+                            <div class="input-group">
+                                <div class="col-lg-3 pe-0">
+                                    <select id="paymentMethod" class="form-select rounded-0" id="example-select"
+                                        name="payment_method" required>
+                                        <option value="1">Cash</option>
+                                        <option value="2">Bank</option>
+                                    </select>
+                                </div>
+
+                                <div class="col-lg-9">
+                                    <div class="input-group">
+                                        <input id="totalBalance" type="number" step="0.01" min="0"
+                                            class="form-control rounded-0" placeholder="Enter Amount" name="balance"
+                                            required>
+                                        <div class="input-group-text">Tk</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="bankInfo" class="d-none">
+                            <h4>Bank Information</h4>
+                            <div class="row mt-3">
+                                <div class="col-lg-12">
+                                    <div class="mb-3">
+                                        <label for="example-Account" class="form-label">Select Bank</label>
+                                        <select class="form-select rounded-0 " name="bank_id">
+                                            <option value="">Select Bank</option>
+                                            @foreach ($banks as $item)
+                                                <option value="{{ $item->id }}" data-balance="{{ $item->balance }}">
+                                                    {{ $item->account_no . ' - ' . $item->account_name . ' - ' . $item->bank_name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="mb-3">
+                                        <label for="example-check" class="form-label">Check No</label>
+                                        <input type="text" id="example-check" class="form-control" name="check_no"
+                                            placeholder="Check No">
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <div class="mb-3">
+                                        <label for="example-depositor" class="form-label">Depositor Name</label>
+                                        <input id="depositor_name" type="text" id="example-depositor"
+                                            class="form-control" name="depositor_name" placeholder="Depositor Name">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="catename" class="form-label">Comment</label>
+                            <textarea class="form-control" name="comment" placeholder="Comment" rows="5"></textarea>
+                        </div>
+                        <div class="mb-3 text-end">
+                            <button class="btn btn-primary" type="submit">Add Payment</button>
+                            <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </form>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div>
+
+    <div id="sellDetail" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="mb-2">Account's Receivable Description</h4>
+                            <p id="accReceivableDesc"></p>
+                        </div>
+                    </div> <!-- end card -->
+                    <div class="text-end">
+                        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+
+    <x-confirmation-modal></x-confirmation-modal>
+@endsection
+
+@section('script')
+    @vite(['resources/js/app.js', 'resources/js/pages/form-pickers.init.js', 'resources/js/pages/datatables.init.js', 'resources/js/pages/form-advanced.init.js'])
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            (function($) {
+                "use strict";
+
+                $(document).on('click', '.paymentBtn', function() {
+                    var modal = $('#purchasePaymentModal');
+                    let data = $(this).data();
+                    modal.find('.supplierName').text(data.suppliername);
+
+                    $('#paymentForm')[0].reset();
+                    $('#bankInfo').addClass('d-none');
+                    $('#bank_id').prop('required', false);
+                    $('#withdrawer_name').prop('required', false);
+                    $('#paymentForm').attr('action', data.action);
+                    // $('.selectBank').attr('disabled', true);
+
+                    modal.modal('show');
+                });
+
+                $('#paymentMethod').on('change', function() {
+                    if ($(this).val() == 2) {
+                        $('#bankInfo').removeClass('d-none');
+                        $('#bank_id').prop('required', true);
+                        $('#withdrawer_name').prop('required', true);
+                    } else {
+                        $('#bankInfo').addClass('d-none');
+                        $('#bank_id').prop('required', false);
+                        $('#withdrawer_name').prop('required', false);
+                    }
+                });
+
+                $(document).on('click', '.printBtn', function() {
+                    document.getElementById('form-action').value = 'print';
+                    $('#myForm').attr('target', '_blank');
+                    $('#myForm').submit();
+                });
+
+                $(document).on('click', '.sellDetailBtn', function() {
+                    var modal = $('#sellDetail');
+                    let data = $(this).data();
+
+                    modal.find('#accReceivableDesc').text(data.description);
+                    modal.modal('show');
+                });
+
+                $(document).on('click', '.clear-btn', function() {
+                    $('.basicDatepicker input').val('');
+                    $('.rangeDatepicker input').val('');
+                    $('#type-select').val('');
+                });
+
+                $('#type-select').on('change', function() {
+                    const selectedValue = $(this).val();
+
+                    if (selectedValue == '') {
+                        $('.basicDatepicker input').val('');
+                        $('.rangeDatepicker input').val('');
+                        $('.basicDatepicker input').prop('disabled', true);
+                        $('.rangeDatepicker input').prop('disabled', true);
+                    } else if (selectedValue == '1') {
+                        $('.basicDatepicker').removeClass('d-none');
+                        $('.basicDatepicker input').prop('disabled', false);
+
+                        $('.rangeDatepicker').addClass('d-none');
+                        $('.rangeDatepicker input').val('');
+                    } else if (selectedValue == '2') {
+                        $('.rangeDatepicker').removeClass('d-none');
+                        $('.rangeDatepicker input').prop('disabled', false);
+
+                        $('.basicDatepicker').addClass('d-none');
+                        $('.basicDatepicker input').val('');
+                    }
+                });
+
+
+            })(jQuery);
+        });
+    </script>
+@endsection
