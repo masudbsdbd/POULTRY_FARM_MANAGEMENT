@@ -79,6 +79,14 @@ class CustomerController extends Controller
     }
 
 
+    public function manageBatch($batch_id)
+    {
+        $batchInfo = PoultryBatch::find($batch_id);
+        $customerInfo = Customer::find($batchInfo->customer_id);
+        $pageTitle = 'Manage Batch for ' . $customerInfo->name;
+        return view('customer.manage_batch', compact('pageTitle', 'batchInfo', 'customerInfo'));
+    }
+
 
     public function advanceIndex()
     {

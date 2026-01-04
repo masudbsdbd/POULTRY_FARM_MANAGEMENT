@@ -52,7 +52,7 @@ class PoultryBatchController extends Controller
         ]);
 
         // Create new batch
-        $batch = new PoultryBatch(); // ধরছি model নাম PoultryBatch
+        $batch = new PoultryBatch();
         $batch->customer_id = $validated['customer_id'];
         $batch->batch_name = $validated['batch_name'];
         $batch->batch_number = $validated['batch_number'] ?? null;

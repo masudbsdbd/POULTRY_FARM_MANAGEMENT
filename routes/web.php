@@ -529,5 +529,14 @@ Route::middleware('authenticated')->group(function () {
     Route::controller('CustomerController')->name('customer.')->prefix('customer')->group(function () {
         Route::get('batches/{customer_id}', 'batches')->name('batches');
         Route::get('batches/create/{customer_id}', 'createBatch')->name('createBatch');
+        Route::get('batches/manage/{batch_id}', 'manageBatch')->name('manageBatch');
+    });
+
+
+    // Customer Management
+    Route::controller('PoultryDeathController')->name('death.')->prefix('death')->group(function () {
+        Route::get('list/{batch_id}', 'deathList')->name('list');
+        Route::post('store/{id?}', 'store')->name('store');
+        Route::post('delete/{id}', 'delete')->name('delete');
     });
 });

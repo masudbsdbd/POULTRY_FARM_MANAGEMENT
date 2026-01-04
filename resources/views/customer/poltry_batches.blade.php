@@ -35,6 +35,7 @@
                                 <th class="text-center">Grade</th>
                                 <th class="text-center">Start Date</th>
                                 <th class="text-center">Close Date</th>
+                                <th class="text-center">Manage Batch</th>
                                 <th class="text-center">Status</th>
                                 {{-- <th class="text-end">Action</th> --}}
                             </tr>
@@ -51,6 +52,12 @@
                                 <td class="text-center">{{ $batch->chicken_grade ?? '-' }}</td>
                                 <td class="text-center">{{ \Carbon\Carbon::parse($batch->batch_start_date)->format('d M, Y') }}</td>
                                 <td class="text-center">{{ $batch->batch_close_date ? \Carbon\Carbon::parse($batch->batch_close_date)->format('d M, Y') : '-' }}</td>
+                                <td class="text-center">
+                                    <a href="{{ route('customer.manageBatch', $batch->id) }}"
+                                        class="mb-2 btn btn-primary waves-effect waves-light createCatBtn">
+                                        Manage Batch
+                                    </a>
+                                </td>
                                 <td class="text-center">
                                     @if($batch->status == 'active')
                                         <span class="badge badge-soft-primary">Active</span>
