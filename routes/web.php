@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\PoultryBatchController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
@@ -517,5 +518,16 @@ Route::middleware('authenticated')->group(function () {
         Route::get('/', 'index')->name('index');
         Route::post('create/{id?}', 'store')->name('store');
         Route::post('delete/{id}', 'delete')->name('delete');
+    });
+
+
+    // Customer Management
+    Route::resource('poultrybatch', PoultryBatchController::class);
+
+
+    // Customer Management
+    Route::controller('CustomerController')->name('customer.')->prefix('customer')->group(function () {
+        Route::get('batches/{customer_id}', 'batches')->name('batches');
+        Route::get('batches/create/{customer_id}', 'createBatch')->name('createBatch');
     });
 });

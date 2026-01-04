@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class Customer extends Model
 {
+    public function batches()
+    {
+        return $this->hasMany(PoultryBatch::class);
+    }
+
     public function scopeNotDeleted($query)
     {
         return $query->where('is_deleted', 0);
@@ -20,7 +25,7 @@ class Customer extends Model
     {
         return $this->belongsTo(CustomerType::class, 'type');
     }
-    
+
     public function customerReturn()
     {
         return $this->hasMany('App\Models\CustomerReturn');
@@ -35,6 +40,4 @@ class Customer extends Model
     {
         return $this->hasMany(Quotation::class);
     }
-
-        
 }

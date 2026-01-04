@@ -31,15 +31,16 @@
                             <tr>
                                 <th>SL</th>
                                 <th class="text-center">Name</th>
-                                <th class="text-center">Code</th>
-                                <th class="text-center">Compnay</th>
+                                {{-- <th class="text-center">Code</th> --}}
+                                {{-- <th class="text-center">Compnay</th> --}}
                                 <th class="text-center">Mobile</th>
                                 <th class="text-center">Email</th>
-                                <th class="text-center">TRN Number</th>
+                                <th class="text-center">Batches</th>
+                                {{-- <th class="text-center">TRN Number</th> --}}
                                 <th class="text-center">Status</th>
                                 <!-- <th class="text-center">Advance</th>
                                 <th class="text-center">Sell Due</th> -->
-                                <th class="text-center">Created At</th>
+                                {{-- <th class="text-center">Created At</th> --}}
                                 <th class="text-end">Action</th>
                             </tr>
                         </thead>
@@ -50,11 +51,16 @@
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td class="text-center">{{ $item->name }}</td>
-                                <td class="text-center">{{ $item->code }}</td>
-                                <td class="text-center">{{ $item->company }}</td>
+                                {{-- <td class="text-center">{{ $item->code }}</td> --}}
+                                {{-- <td class="text-center">{{ $item->company }}</td> --}}
                                 <td class="text-center">{{ $item->mobile }}</td>
                                 <td class="text-center">{{ $item->email }}</td>
-                                <td class="text-center">{{ $item->trn_number }}</td>
+                                <td class="text-center">
+                                    <a href="{{ route('customer.batches', $item->id) }}" class="btn btn-primary waves-effect waves-light">
+                                        {{ $item->batches->count() }}
+                                    </a>
+                                </td>
+                                {{-- <td class="text-center">{{ $item->trn_number }}</td> --}}
                                 <td class="text-center">
                                     @if ($item->status == 1)
                                     <span class="badge badge-soft-primary">Activated</span>
@@ -62,7 +68,7 @@
                                     <span class="badge badge-soft-dark">Deactivated</span>
                                     @endif
                                 </td>
-                                <td class="text-center">{{ showDateTime($item->created_at) }}</td>
+                                {{-- <td class="text-center">{{ showDateTime($item->created_at) }}</td> --}}
                                 <td class="text-end">
                                     <!-- <a title="Customer Ledger" href="{{ route('customer.ledger.sell.index', $item->id) }}"
                                         class="btn btn-danger waves-effect waves-light">
@@ -94,97 +100,6 @@
     </div>
     <!-- end row-->
 </div> <!-- container -->
-
-<!-- <div id="advancePaymentModal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-body">
-                <div class="text-center mt-2 mb-4">
-                    <h4>Pay <span class="supplierName"></span></h4>
-                    <h6>Advance Amount: <span class="customeradvance"></span></h6>
-                    <h6>Due Amount <span class="customerdue"></span></h6>
-                </div>
-                <form id="paymentForm" class="px-3" action="" method="POST">
-                    @csrf
-                    <h4>Payment Method and Type</h4>
-                    <div class="my-2">
-                            <input class="form-check-input" type="radio" name="payment_mode" id="flexRadioDefault1" value="1" checked>
-                            <label class="form-check-label" for="flexRadioDefault1">
-                                Pay
-                            </label>
-                            <input class="form-check-input ms-2" type="radio" name="payment_mode"
-                                id="flexRadioDefault2" value="2">
-                            <label class="form-check-label" for="flexRadioDefault2">
-                                Return
-                            </label>
-                        </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Payment Amount</label>
-                        <div class="input-group">
-                            <div class="col-lg-3 pe-0">
-                                <select id="paymentMethod" class="form-select rounded-0" id="example-select"
-                                    name="payment_method" required>
-                                    <option value="1">Cash</option>
-                                    <option value="2">Bank</option>
-                                </select>
-                            </div>
-
-                            <div class="col-lg-9">
-                                <div class="input-group">
-                                    <input type="number" step="0.01" min="0" class="form-control rounded-0"
-                                        placeholder="Enter Amount" name="balance" required>
-                                    <div class="input-group-text">Tk</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="bankInfo" class="d-none">
-                        <h4>Bank Information</h4>
-                        <div class="row mt-3">
-                            <div class="col-lg-12">
-                                <div class="mb-3">
-                                    <label for="example-Account" class="form-label">Select Bank</label>
-                                    <select id="bank_id" class="form-select rounded-0" name="bank_id">
-                                        <option value="">Select Bank</option>
-                                        @foreach ($banks as $item)
-                                        <option value="{{ $item->id }}">
-                                            {{ $item->account_no . ' - ' . $item->account_name . ' - ' . $item->bank_name }}
-                                        </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-lg-6">
-                                <div class="mb-3">
-                                    <label for="example-check" class="form-label">Check No</label>
-                                    <input type="text" id="example-check" class="form-control" name="check_no"
-                                        placeholder="Check No">
-                                </div>
-                            </div>
-                            <div class="col-lg-6">
-                                <div class="mb-3">
-                                    <label for="example-withdrawer" class="form-label">Withdrawer Name</label>
-                                    <input id="depositor_name" type="text" id="example-withdrawer"
-                                        class="form-control" name="depositor_name" placeholder="Withdrawer Name">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="catename" class="form-label">Comment</label>
-                        <textarea class="form-control" name="comment" placeholder="Comment" rows="5"></textarea>
-                    </div>
-                    <div class="mb-3 text-end">
-                        <button class="btn btn-primary" type="submit">Add Payment</button>
-                        <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div> -->
 
 <x-confirmation-modal></x-confirmation-modal>
 @endsection

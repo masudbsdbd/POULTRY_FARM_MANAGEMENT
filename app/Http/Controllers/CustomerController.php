@@ -15,6 +15,7 @@ use App\Models\JournalEntry;
 use App\Models\Payable;
 use App\Models\Receivable;
 use App\Models\Income;
+use App\Models\PoultryBatch;
 
 class CustomerController extends Controller
 {
@@ -59,6 +60,26 @@ class CustomerController extends Controller
         return view('customer.index', compact('pageTitle', 'customers', 'banks', 'customerTypes', 'buttonColors', 'count'));
     }
 
+
+    public function batches($customer_id)
+    {
+        $customerInfo = Customer::find($customer_id);
+        $pageTitle = $customerInfo->name . "'s batches";
+        $batches = PoultryBatch::where('customer_id', $customer_id)->orderBy('batch_start_date', 'desc')->get();
+        return view('customer.poltry_batches', compact('pageTitle', 'batches', 'customerInfo'));
+    }
+
+    public function createBatch($customer_id)
+    {
+        $customerInfo = Customer::find($customer_id);
+        $pageTitle = 'Create Batch for ' . $customerInfo->name;
+        $customers = Customer::get();
+
+        return view('poultry_batch.create', compact('pageTitle', 'customer_id', 'customers'));
+    }
+
+
+
     public function advanceIndex()
     {
         $pageTitle = 'All Customers with Advance';
@@ -83,128 +104,6 @@ class CustomerController extends Controller
         $banks = Bank::whereStatus(1)->notDeleted()->latest()->get();
         return view('customer.store', compact('pageTitle', 'customer', 'types', 'banks'));
     }
-
-    // public function payment(Request $request, $id)
-    // {
-    //     // dd($request->all());
-
-    //     $bank = Bank::whereId($request->bank_id)->first();
-    //     // if (isset($bank) && $request->balance > $bank->balance && $request->payment_method == 2) {
-    //     //     $notify[] = ['error', 'Insufficient balance in ' . $bank->bank_name];
-    //     //     return back()->withNotify($notify);
-    //     // }
-
-    //     $customer = Customer::whereId($id)->first();
-
-    //     if ($request->payment_mode == 1) {
-    //     $sells = Sell::whereCustomerId($id)->where('due_to_company', '>', 0)->get();
-    //     $totalDues = Sell::whereCustomerId($id)->sum('due_to_company');
-
-    //     $inputtedAmount = $request->balance;
-    //     $targetedId = [];
-    //     $newArr = [];
-    //     $bulkAmount = 0;
-    //     $count = 0;
-
-    //     // dd($sells->toArray());
-
-    //     foreach ($sells as $item) {
-    //         if ($inputtedAmount < $item->due_to_company) {
-
-    //             // // // // == ===== == Receivable Account Start ==>
-    //             $receivableData = Receivable::where('sell_id', $item->id)->where('customer_id', $item->customer_id)->first();
-    //             if ($receivableData) {
-    //                 $receivableData->receivable_amount -= $inputtedAmount;
-    //                 $receivableData->save();
-    //             }
-    //             // // // // == ===== == Receivable Account End ==>
-
-    //             $item->payment_received += $inputtedAmount;
-    //             $item->due_to_company   -= $inputtedAmount;
-    //             $item->save();
-
-    //             $targetedId = $item->id;
-    //             $this->sellAccountUpdate($request, $targetedId, $inputtedAmount);
-
-    //             break;
-    //         } else {
-
-    //             // // // // == ===== == Receivable Account Start ==>
-    //             $receivableData = Receivable::where('sell_id', $item->id)->where('customer_id', $item->customer_id)->first();
-    //             if ($receivableData) {
-    //                 $receivableData->receivable_amount = 0;
-    //                 $receivableData->save();
-    //             }
-    //             // // // // == ===== == Receivable Account End ==>
-
-
-
-    //             $inputtedAmount -= $item->due_to_company;
-    //             $bulkAmount += $item->due_to_company;
-
-    //             $item->payment_received = $item->total_price;
-    //             $item->due_to_company = 0;
-    //             $item->save();
-
-    //             array_push($targetedId, $item->id);
-    //             $newArr = $targetedId;
-
-    //             $count++;
-
-    //             if ($inputtedAmount == 0) {
-    //                 break;
-    //             }
-    //         }
-    //     }
-
-    //     if (is_array($newArr) && !empty($newArr)) {
-    //         $this->sellAccountUpdate($request, $newArr, $bulkAmount);
-    //     }
-
-    //     if ($request->balance > $totalDues) {
-
-
-    //         $extra = $request->balance - $totalDues;
-
-    //         $customer->advance += $extra;
-    //         $customer->save();
-    //         $this->customerAccountUpdate($request, $customer, $extra,2);
-
-    //         // // // == ===== == Payable Account Start ==>
-    //         $payableData = Payable::where('customer_id', $id)->where('payables_head_id', 2)->first();
-    //         if ($payableData) {
-    //             $payableData->payable_amount += $extra;
-    //             $payableData->description= "Customer advance amount of " . showAmount($extra);
-    //             $payableData->save();
-    //         }
-    //         // // // == ===== == Payable Account End ==>
-
-    //         // dd($extra);
-
-    //     }
-    // }else {
-    //     if ($request->balance > $customer->advance) {
-    //         $notify[] = ['error', 'Insufficient advance available with the customer.'];
-    //         return back()->withNotify($notify);
-    //     }
-
-    //     $customer->advance -= $request->balance;
-    //     $customer->save();
-
-    //     $this->customerAccountUpdate($request, $customer, $request->balance, 1);
-        
-    //     // == ===== == Payable Account Start ==>
-    //     $payableData = Payable::where('customer_id', $id)->where('payables_head_id', 2)->first();
-    //     if ($payableData) {
-    //         $payableData->payable_amount -= $request->balance;
-    //         $payableData->save();
-    //     }
-    //     // == ===== == Payable Account End ==>
-    // }
-
-    //     $notify[] = ['success', 'Payment successfully completed.'];
-    //     return back()->withNotify($notify);
-    // }
 
     public function payment(Request $request, $id)
     {
@@ -237,7 +136,6 @@ class CustomerController extends Controller
                         $receivableData->receivable_amount = 0;
                         $receivableData->save();
                     }
-
                 } else {
                     $customer->due -= $inputtedAmount;
                     $this->customerAccountUpdate($request, $customer, $inputtedAmount, 2, $type = 1);
@@ -313,7 +211,6 @@ class CustomerController extends Controller
                     $payableData->save();
                 }
             }
-
         } else {
             if ($request->balance > $customer->advance) {
                 $notify[] = ['error', 'Insufficient advance available with the customer.'];
@@ -323,7 +220,7 @@ class CustomerController extends Controller
             $customer->advance -= $request->balance;
             $customer->save();
 
-            $this->customerAccountUpdate($request, $customer, $request->balance, 1, $type = 2); 
+            $this->customerAccountUpdate($request, $customer, $request->balance, 1, $type = 2);
 
             $payableData = Payable::where('customer_id', $id)->where('payables_head_id', 2)->first();
             if ($payableData) {
@@ -338,76 +235,75 @@ class CustomerController extends Controller
 
     public function customerAccountUpdate($request, $customer, $extraAmount = 0, $paymentMode, $type)
     {
-        if($type == 1){
+        if ($type == 1) {
 
-        $bankTrRecDesc = "Company received due from customer " . $customer->name . ". Amount of .$request->balance";
+            $bankTrRecDesc = "Company received due from customer " . $customer->name . ". Amount of .$request->balance";
 
-        $accArr = [
-            'customer_id'       => $customer->id,
-            'type'              => 7,
-            $paymentMode == 1 ? 'debit' : 'credit'  => $paymentMode == 2 ? ($extraAmount > 0 ? $extraAmount : $request->balance) : $request->balance,
-            'description' => "Customer {$customer->name} paid amount of {$request->balance} for sell due. ",
-            'payment_method'    => $request->payment_method,
-        ];
-
-        $account = updateAcc($accArr, 'NTR', 0, 7);
-
-        if ($request->payment_method == 2) {
-            $bankTrArr = [
-                'account_id'       => $account->id,
-                'depositor_name' => $request->depositor_name,
+            $accArr = [
+                'customer_id'       => $customer->id,
+                'type'              => 7,
                 $paymentMode == 1 ? 'debit' : 'credit'  => $paymentMode == 2 ? ($extraAmount > 0 ? $extraAmount : $request->balance) : $request->balance,
-                'description'      => $paymentMode == 1 ? $bankTrPayDesc : $bankTrRecDesc,
-                'bank_id'          => $request->bank_id,
-                'check_no'         => $request->check_no,
+                'description' => "Customer {$customer->name} paid amount of {$request->balance} for sell due. ",
+                'payment_method'    => $request->payment_method,
             ];
 
-            bankTr($account, $bankTrArr);
-        }
+            $account = updateAcc($accArr, 'NTR', 0, 7);
 
-        }else{
+            if ($request->payment_method == 2) {
+                $bankTrArr = [
+                    'account_id'       => $account->id,
+                    'depositor_name' => $request->depositor_name,
+                    $paymentMode == 1 ? 'debit' : 'credit'  => $paymentMode == 2 ? ($extraAmount > 0 ? $extraAmount : $request->balance) : $request->balance,
+                    'description'      => $paymentMode == 1 ? $bankTrPayDesc : $bankTrRecDesc,
+                    'bank_id'          => $request->bank_id,
+                    'check_no'         => $request->check_no,
+                ];
 
-        // $accPayDesc = "Paid advance payment of " . ($extraAmount > 0 ? $extraAmount : $request->balance) . " Tk to the customer " . $customer->name;
-        // $bankTrPayDesc = 'Company receive advance from the customer ' . $customer->name;
-
-        // $accRecDesc = "Receive advance amount of " . $request->balance . " Tk from the customer " . $customer->name;
-        // $bankTrRecDesc = 'Company paid advance to the customer ' . $customer->name;
-
-        $accRecDesc = "Received an advance payment of " . ($extraAmount > 0 ? $extraAmount : $request->balance) . " Tk from customer " . $customer->name . ".";
-        $bankTrRecDesc = "Company received an advance from customer " . $customer->name . ".";
-
-        $accPayDesc = "Returned an advance amount of " . $request->balance . " Tk to customer " . $customer->name . ".";
-        $bankTrPayDesc = "Company paid back the advance to customer " . $customer->name . ".";
-        
-
-        $accArr = [
-            'customer_id'       => $customer->id,
-            'type'              => 5,
-            // 'credit'            => $extraAmount > 0 ? $extraAmount : $request->balance,
-            // 'description'       => $request->comment ? $request->comment : "Paid advance payment of " . ($extraAmount > 0 ? $extraAmount : $request->balance) . " Tk to the Customer " . $customer->name,
-            $paymentMode == 1 ? 'debit' : 'credit'  => $paymentMode == 2 ? ($extraAmount > 0 ? $extraAmount : $request->balance) : $request->balance,
-            'description'       => $request->comment ? $request->comment : ($paymentMode == 1 ? $accPayDesc : $accRecDesc),
-            'payment_method'    => $request->payment_method,
-        ];
-
-        $account = updateAcc($accArr, 'NTR', 0, 5);
-
-        if ($request->payment_method == 2) {
-            $bankTrArr = [
-                'account_id'       => $account->id,
-                // 'depositor_name'   => $request->depositor_name,
-                // 'credit'           => $extraAmount > 0 ? $extraAmount : $request->balance,
-                // 'description'      => 'Company paid advance to the Customer ' . $customer->name,
-                $paymentMode == 1 ? 'withdrawer_name' : 'depositor_name' => $request->depositor_name,
-                $paymentMode == 1 ? 'debit' : 'credit'  => $paymentMode == 2 ? ($extraAmount > 0 ? $extraAmount : $request->balance) : $request->balance,
-                'description'      => $paymentMode == 1 ? $bankTrPayDesc : $bankTrRecDesc,
-                'bank_id'          => $request->bank_id,
-                'check_no'         => $request->check_no,
-            ];
-
-            bankTr($account, $bankTrArr);
-        }
+                bankTr($account, $bankTrArr);
             }
+        } else {
+
+            // $accPayDesc = "Paid advance payment of " . ($extraAmount > 0 ? $extraAmount : $request->balance) . " Tk to the customer " . $customer->name;
+            // $bankTrPayDesc = 'Company receive advance from the customer ' . $customer->name;
+
+            // $accRecDesc = "Receive advance amount of " . $request->balance . " Tk from the customer " . $customer->name;
+            // $bankTrRecDesc = 'Company paid advance to the customer ' . $customer->name;
+
+            $accRecDesc = "Received an advance payment of " . ($extraAmount > 0 ? $extraAmount : $request->balance) . " Tk from customer " . $customer->name . ".";
+            $bankTrRecDesc = "Company received an advance from customer " . $customer->name . ".";
+
+            $accPayDesc = "Returned an advance amount of " . $request->balance . " Tk to customer " . $customer->name . ".";
+            $bankTrPayDesc = "Company paid back the advance to customer " . $customer->name . ".";
+
+
+            $accArr = [
+                'customer_id'       => $customer->id,
+                'type'              => 5,
+                // 'credit'            => $extraAmount > 0 ? $extraAmount : $request->balance,
+                // 'description'       => $request->comment ? $request->comment : "Paid advance payment of " . ($extraAmount > 0 ? $extraAmount : $request->balance) . " Tk to the Customer " . $customer->name,
+                $paymentMode == 1 ? 'debit' : 'credit'  => $paymentMode == 2 ? ($extraAmount > 0 ? $extraAmount : $request->balance) : $request->balance,
+                'description'       => $request->comment ? $request->comment : ($paymentMode == 1 ? $accPayDesc : $accRecDesc),
+                'payment_method'    => $request->payment_method,
+            ];
+
+            $account = updateAcc($accArr, 'NTR', 0, 5);
+
+            if ($request->payment_method == 2) {
+                $bankTrArr = [
+                    'account_id'       => $account->id,
+                    // 'depositor_name'   => $request->depositor_name,
+                    // 'credit'           => $extraAmount > 0 ? $extraAmount : $request->balance,
+                    // 'description'      => 'Company paid advance to the Customer ' . $customer->name,
+                    $paymentMode == 1 ? 'withdrawer_name' : 'depositor_name' => $request->depositor_name,
+                    $paymentMode == 1 ? 'debit' : 'credit'  => $paymentMode == 2 ? ($extraAmount > 0 ? $extraAmount : $request->balance) : $request->balance,
+                    'description'      => $paymentMode == 1 ? $bankTrPayDesc : $bankTrRecDesc,
+                    'bank_id'          => $request->bank_id,
+                    'check_no'         => $request->check_no,
+                ];
+
+                bankTr($account, $bankTrArr);
+            }
+        }
     }
 
     public function sellAccountUpdate($request, $id, $amount = 0)
@@ -523,96 +419,6 @@ class CustomerController extends Controller
         $customer->address = $request->address;
         $customer->status = $givenStatus;
         $customer->save();
-
-
-    //     // // == ===== == Payable Account Start ==>
-    //     if ($id == 0) {
-    //         $payableData = new Payable();
-    //         $payableData->customer_id = $customer->id;
-    //         $payableData->payables_head_id = 2;
-    //         $payableData->save();
-    //     }
-    //     // // == ===== == Payable Account End ==>
-
-    //     // ======================= advance or due =======================start
-    //     if($id == 0){
-    //     if(!empty($request->due_amount)){
-    //         $customer->due = $request->due_amount;
-    //         $customer->save();
-
-    //     // // == ===== == Receivable Account Start ==>
-    //         $receivableData = new Receivable();
-    //         $receivableData->customer_id = $customer->id;
-    //         $receivableData->receivable_head_id = 4;
-    //         $receivableData->receivable_amount = $request->due_amount;
-    //         $receivableData->save();
-    //     // // == ===== == Receivable Account End ==>
-    //     // // == ===== == Income Account Start ==>
-    //         $incomes = new Income();
-    //         $incomes->entry_type = 1;
-    //         $incomes->description = "Sale due to customer {$customer->name}, amount: {$request->due_amount} Tk";
-    //         $incomes->effective_amount = $request->due_amount;
-    //         $incomes->debit_or_credit = 'credit';
-    //         $incomes->entry_by = auth()->user()->id;
-    //         $incomes->save();
-    //     // // == ===== == Income Account End ==>
-
-    //     $accArr = [
-    //         'customer_id'       => $customer->id,
-    //         'type'              => 2,
-    //         'amount'            => $request->due_amount,
-    //         'description'        =>"Sale due to customer {$customer->name}, amount: {$request->due_amount} Tk",
-    //     ];
-
-    //     updateAcc($accArr, 'customer_id', $customer->id, 2);
-
-
-    //     }else{
-
-    //         $customer->advance = $request->balance;
-    //         $customer->save();
-
-
-    //         $accArr = [
-    //             'customer_id'       => $customer->id,
-    //             'type'              => 5,
-    //             'credit'            => $request->balance,
-    //             'description'       =>  "Payment received of " . $request->balance . " Tk as Advance from Customer .",
-    //             'payment_method'    => $request->payment_method,
-    //         ];
-    
-    //         $account = updateAcc($accArr, 'NTR', $customer->id, 5);
-
-
-    //         $payableData = Payable::where('customer_id', $customer->id)->where('payables_head_id', 2)->first();
-    //         if ($payableData) {
-    //             $payableData->payable_amount += $request->balance;
-    //             $payableData->description = "Customer advance amount of " . showAmount($request->balance);
-    //             $payableData->save();
-    //         }
-
-
-    
-    //         if ($request->payment_method == 2) {
-    
-    //             $bankTrArr = [
-    //                 'account_id'       => $account->id,
-    //                 'depositor_name'   => $request->depositor_name,
-    //                 'credit'           => $request->balance,
-    //                 'description'      => 'Company received amount of ' . $request->balance . ' Tk as Advance from Customer .',
-    //                 'bank_id'          => $request->bank_id,
-    //                 'check_no'         => $request->check_no,
-    //             ];
-    
-    //             bankTr($account, $bankTrArr);
-    //         }
-    
-
-    //     }
-    // }
-        // ======================= advance or due =======================end
-
-
         $notify[] = ['success', $message];
         return to_route('customer.index')->withNotify($notify);
     }

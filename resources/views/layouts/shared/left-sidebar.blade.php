@@ -143,6 +143,27 @@
             @endcan
 
 
+            {{-- pultry management start from here --}}
+            {{-- poultry batch management start --}}
+            <li class="menu-item">
+                <a href="#managePoultryBatch" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
+                    <span class="menu-text"> Batches </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="managePoultryBatch">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('poultrybatch.index') }}"><span class="menu-text">All Active Batches</span></a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {{-- poultry batch management end --}}
+            {{-- pultry management end here --}}
+            
+            
+
             @can('customer-list')
 
             <li class="menu-item">
