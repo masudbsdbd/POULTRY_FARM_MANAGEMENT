@@ -16,6 +16,7 @@ use App\Models\Payable;
 use App\Models\Receivable;
 use App\Models\Income;
 use App\Models\PoultryBatch;
+use App\Models\PoultryChickDeath;
 
 class CustomerController extends Controller
 {
@@ -84,7 +85,8 @@ class CustomerController extends Controller
         $batchInfo = PoultryBatch::find($batch_id);
         $customerInfo = Customer::find($batchInfo->customer_id);
         $pageTitle = 'Manage Batch for ' . $customerInfo->name;
-        return view('customer.manage_batch', compact('pageTitle', 'batchInfo', 'customerInfo'));
+        $totalDeaths = PoultryChickDeath::where('batch_id', $batch_id)->sum('total_deaths');
+        return view('customer.manage_batch', compact('pageTitle', 'batchInfo', 'customerInfo', 'totalDeaths'));
     }
 
 

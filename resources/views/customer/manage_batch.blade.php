@@ -18,7 +18,7 @@
     {{-- dashboard cards --}}
     <div class="row g-3">
          <div class="col-md-6 col-xl-4">
-            <a href="{{ route('quotation.index') }}" class="btn btn-info"><i class="mdi mdi-arrow-left"></i>back</a>
+            <a href="{{ route('customer.index') }}" class="btn btn-info"><i class="mdi mdi-arrow-left"></i>back</a>
         </div>
         <div class="col-md-6 col-xl-4"></div><div class="col-md-6 col-xl-4"></div>
 
@@ -33,8 +33,13 @@
                         </div>
                         <div class="col-6">
                             <div class="text-end">
-                                <h3 class="text-dark mt-1">&#2547; <span data-plugin="counterup"><span id="total-quot-amount">100</span></span></h3>
-                                <p class="text-muted mb-1 text-truncate">Total Quatation Price</p>
+                                <h3 class="text-dark mt-1">
+                                    <span data-plugin="counterup">
+                                        <span id="total-quot-amount">{{ $batchInfo->total_chickens }}
+                                        </span>
+                                    </span>
+                                </h3>
+                                <p class="text-muted mb-1 text-truncate">Total Chickens</p>
                             </div>
                         </div>
                     </div> <!-- end row-->
@@ -53,8 +58,19 @@
                         </div>
                         <div class="col-6">
                             <div class="text-end">
-                                <h3 class="text-dark mt-1">&#2547; <span data-plugin="counterup"><span id="total-invoiced-amount">500</span></span></h3>
-                                <p class="text-muted mb-1 text-truncate">Total Invoiced Amount</p>
+                                <h3 class="text-dark mt-1">
+                                    <span data-plugin="counterup">
+                                        <span id="total-invoiced-amount">
+                                            @php
+                                               $daysOld =  floor($batchInfo->batch_start_date->diffInDays($batchInfo->batch_close_date ?? now()));
+                                            @endphp
+                                            {{ 
+                                                $daysOld
+                                            }}
+                                        </span>
+                                    </span>
+                                </h3>
+                                <p class="text-muted mb-1 text-truncate">Days Old</p>
                             </div>
                         </div>
                     </div> <!-- end row-->
@@ -74,9 +90,12 @@
                         </div>
                         <div class="col-6">
                             <div class="text-end">
-                                <h3 class="text-dark mt-1">&#2547; 
-                                    <span data-plugin="counterup"><span id="total-not-invoiced-amount">200</span></span></h3>
-                                <p class="text-danger mb-1 text-truncate">Not Invoiced Amount</p>
+                                <h3 class="text-dark mt-1">
+                                    <span id="total-not-invoiced-amount">
+                                        {{ round(($totalDeaths / $batchInfo->total_chickens) * 100) }}%
+                                    </span>
+                                </h3>
+                                <p class="text-danger mb-1 text-truncate">Mortality Rate</p>
                             </div>
                         </div>
                     </div> <!-- end row-->
@@ -91,7 +110,7 @@
         <div class="col-md-6">
             <div class="card shadow-sm  rounded-4">
                 <div class="card-header bg-success text-white d-flex align-items-center justify-content-between  rounded-4">
-                    <h5 class="mb-0  text-white"><i class="fe-shopping-bag me-2 text-white"></i> Batch Information</h5>
+                    <h5 class="mb-0  font-20 text-white"><i class="fe-shopping-bag me-2 text-white"></i> Batch Information</h5>
                     <span class="badge bg-light text-info">{{ $batchInfo->batch_name }}</span>
                 </div>
                 <div class="card-body">
@@ -165,31 +184,151 @@
         {{-- batch info end --}}
 
 
-        {{-- mortality info start --}}
         <div class="col-md-6">
+            {{-- mortality info start --}}
             <div class="card shadow-sm rounded-4">
                 <div class="card-header bg-info text-white d-flex align-items-center justify-content-between rounded-4">
-                    <h5 class="mb-0  text-white"><i class="fe-shopping-bag me-2 text-white"></i> Mortality Information</h5>
+                    <h5 class="mb-0  font-20 text-white"><i class="fe-shopping-bag me-2 text-white"></i> Mortality Information</h5>
                     <a href="{{ route('death.list', $batchInfo->id) }}" class="badge bg-light text-info font-16">View Death List</a>
                 </div>
                 <div class="card-body">
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold">Total Deaths:</span>
-                            <span>{{ 10 }}</span>
+                            <span>{{ $totalDeaths }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold">Mortality Rate:</span>
-                            <span>{{ 20 }}%</span>
+                            <span>{{ round(($totalDeaths / $batchInfo->total_chickens) * 100) }}%</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold">Surviving Birds:</span>
-                            <span>{{ 80 }}%</span>
+                            <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
                         </li>
                     </ul>
                 </div>
             </div>
+            {{-- mortality info end --}}
+
+            {{-- Feed Management start --}}
+            <div class="card shadow-sm rounded-4">
+                <div class="card-header bg-warning text-white d-flex align-items-center justify-content-between rounded-4">
+                    <h5 class="mb-0  text-white  font-18"><i class="fe-shopping-bag me-2 text-white"></i> Feed Management</h5>
+                    {{-- <a href="{{ route('death.list', $batchInfo->id) }}" class="badge bg-light text-info font-16">View Feed </a> --}}
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Target Feed Quantity:</span>
+                            <span>{{ $totalDeaths }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Feed Consumed (Bag):</span>
+                            <span>{{ round(($totalDeaths / $batchInfo->total_chickens) * 100) }}%</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Feed Consumed (Kg):</span>
+                            <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Feed Consum Per Chicken (Kg):</span>
+                            <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Feed Consumption %</span>
+                            <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            {{-- Feed Management end --}}
         </div>
+
+
+        {{-- expense info start --}}
+<div class="col-md-8 mt-5">
+    <div class="card shadow-sm rounded-4">
+        <div class="card-header bg-success text-white d-flex align-items-center justify-content-between rounded-top-4">
+            <h5 class="mb-0 font-20 text-white">
+                <i class="fe-shopping-bag me-2"></i> Expense Breakdown
+            </h5>
+            <a href="{{ route('poultry.expense.index', $batchInfo->id) }}" class="badge bg-light text-success font-16">
+                Add Expense
+            </a>
+        </div>
+
+        <div class="card-body">
+            <ul class="list-group list-group-flush">
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Chickens</span>
+                    <span>{{ $expenses['chickens'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Feed</span>
+                    <span>{{ $expenses['feed'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Medicine</span>
+                    <span>{{ $expenses['medicine'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Transportation</span>
+                    <span>{{ $expenses['transportation'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Bedding</span>
+                    <span>{{ $expenses['bedding'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Labor</span>
+                    <span>{{ $expenses['labor'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Utilities</span>
+                    <span>{{ $expenses['utilities'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold text-danger">Death Loss</span>
+                    <span class="text-danger">{{ $expenses['death_loss'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Bio Security</span>
+                    <span>{{ $expenses['bio_security'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Miscellaneous</span>
+                    <span>{{ $expenses['miscellaneous'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="fw-bold">Bad Debt</span>
+                    <span>{{ $expenses['bad_debt'] ?? 0 }} tk</span>
+                </li>
+
+                <li class="list-group-item d-flex justify-content-between border-top mt-2">
+                    <span class="fw-bold fs-5">Total Expense</span>
+                    <span class="fw-bold fs-5 text-success">
+                        {{ $totalExpense ?? 0 }} tk
+                    </span>
+                </li>
+
+            </ul>
+        </div>
+    </div>
+</div>
+{{-- expense info end --}}
+
+        
     </div>
 
 

@@ -539,4 +539,19 @@ Route::middleware('authenticated')->group(function () {
         Route::post('store/{id?}', 'store')->name('store');
         Route::post('delete/{id}', 'delete')->name('delete');
     });
+
+    // Customer Management
+    Route::controller('PoultryExpenseController')->name('poultry.expense.')->prefix('poultry/expense')->group(function () {
+        Route::get('/{batch_id}', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::put('/{expense}', 'update')->name('update');
+        Route::post('/{expense}', 'destroy')->name('destroy');
+    });
+
+    //     Route::prefix('poultry/expense')->name('poultry.expense.')->group(function () {
+    //     Route::get('/{batch_id}', [PoultryExpenseController::class, 'index'])->name('index');
+    //     Route::post('/', [PoultryExpenseController::class, 'store'])->name('store');
+    //     Route::put('/{expense}', [PoultryExpenseController::class, 'update'])->name('update');
+    //     Route::delete('/{expense}', [PoultryExpenseController::class, 'destroy'])->name('destroy');
+    // });
 });

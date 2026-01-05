@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('poultry_chick_deaths', function (Blueprint $table) {
             $table->id();
             $table->bigInteger('batch_id');
-            $table->string('cause_of_death');
+            $table->text('cause_of_death')->nullable();
             $table->date('date_of_death');
             $table->integer('total_deaths');
             $table->timestamps();

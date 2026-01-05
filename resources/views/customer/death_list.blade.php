@@ -13,6 +13,9 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
+                <div class="col-md-6 col-xl-4" style="margin-left: 10px; margin-top: 10px;"> 
+                    <a href="{{ route('customer.manageBatch', $bathInfo->id) }}" class="btn btn-info"><i class="mdi mdi-arrow-left"></i>back</a>
+                </div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <h4 class="header-title">{{ $pageTitle }}</h4>
@@ -29,7 +32,7 @@
                                 <th>Date</th>
                                 <th>Cause of Death</th>
                                 <th>Death total</th>
-                                <th>Action</th>
+                                <th class="text-end">Action</th>
                             </tr>
                         </thead>
 
@@ -38,7 +41,7 @@
                                <tr>
                                     <td>{{ $loop->iteration + 1}}</td>
                                     <td>{{ $list->date_of_death }}</td>
-                                    <td>{{ $list->cause_of_death }}</td>
+                                    <td>{{ $list->cause_of_death ?? "n/a" }}</td>
                                     <td>{{ $list->total_deaths }}</td>
                                     <td class="text-end">
                                         <button type="button"
@@ -96,11 +99,11 @@
                     </div>
                     <div class="mb-3">
                         <label for="cause_of_death" class="form-label">Cause of Death</label>
-                        <input class="form-control" type="text" id="cause_of_death" name="cause_of_death" placeholder="Building Name" required>
+                        <input class="form-control" type="text" id="cause_of_death" name="cause_of_death" placeholder="Building Name">
                     </div>
                     <div class="mb-3 text-end">
-                        <button class="btn btn-primary" type="submit">Create</button>
                         <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+                        <button class="btn btn-primary" type="submit">Create</button>
                     </div>
                 </form>
             </div>
@@ -134,12 +137,12 @@
                     <div class="mb-3">
                         <label for="edit_cause_of_death" class="form-label">Cause of Death</label>
                         <input class="form-control" type="text" id="edit_cause_of_death"
-                            name="cause_of_death" required>
+                            name="cause_of_death">
                     </div>
 
                     <div class="mb-3 text-end">
-                        <button class="btn btn-primary" type="submit">Update</button>
                         <button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button>
+                        <button class="btn btn-primary" type="submit">Update</button>
                     </div>
                 </form>
 

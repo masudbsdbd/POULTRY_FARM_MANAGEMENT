@@ -24,6 +24,12 @@ class PoultryBatch extends Model
         'status',
     ];
 
+    protected $casts = [
+        'batch_start_date' => 'date',
+        'batch_close_date' => 'date',
+    ];
+
+
 
     public function customer()
     {
