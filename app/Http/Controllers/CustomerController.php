@@ -17,6 +17,8 @@ use App\Models\Receivable;
 use App\Models\Income;
 use App\Models\PoultryBatch;
 use App\Models\PoultryChickDeath;
+use App\Models\PoultryExpense;
+use Illuminate\Support\Facades\DB;
 
 class CustomerController extends Controller
 {
@@ -86,7 +88,24 @@ class CustomerController extends Controller
         $customerInfo = Customer::find($batchInfo->customer_id);
         $pageTitle = 'Manage Batch for ' . $customerInfo->name;
         $totalDeaths = PoultryChickDeath::where('batch_id', $batch_id)->sum('total_deaths');
-        return view('customer.manage_batch', compact('pageTitle', 'batchInfo', 'customerInfo', 'totalDeaths'));
+
+        $expenseQuery = PoultryExpense::where('batch_id', $batch_id);
+
+        $expenses = (clone $expenseQuery)->select('category', DB::raw('SUM(total_amount) as total_expense'))
+            ->groupBy('category')
+            ->orderBy('total_expense', 'desc')
+            ->get();
+        $totalExpenses = (clone $expenseQuery)->sum('total_amount');
+
+        $totalFeedConsumedInKg = PoultryExpense::where('batch_id', $batch_id)
+            ->where('category', 'feed')
+            ->get()
+            ->sum(function ($expense) {
+                return $expense->unit === 'bag' ? $expense->quantity * 50 : ($expense->unit === 'kg' ? $expense->quantity : $expense->quantity * 50);
+            });
+
+
+        return view('customer.manage_batch', compact('pageTitle', 'batchInfo', 'customerInfo', 'totalDeaths', 'expenses', 'totalExpenses', 'totalFeedConsumedInKg'));
     }
 
 

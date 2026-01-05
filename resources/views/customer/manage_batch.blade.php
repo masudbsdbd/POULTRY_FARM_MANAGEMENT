@@ -220,19 +220,31 @@
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold">Target Feed Quantity:</span>
-                            <span>{{ $totalDeaths }}</span>
+                            @php
+                                $tergetFeedUnit = $batchInfo->terget_feed_unit;
+                                $tergetFeedInKg = $batchInfo->target_feed_qty;
+                                if($tergetFeedUnit == 'bag'){
+                                    $tergetFeedInKg = $tergetFeedInKg * 50;
+                                }
+                                
+                            @endphp
+                            <span>{{ showAmount(( $tergetFeedInKg / 50), 2, false) ?? 'n/a' }} Bag</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold">Feed Consumed (Bag):</span>
-                            <span>{{ round(($totalDeaths / $batchInfo->total_chickens) * 100) }}%</span>
+                            <span>{{ showAmount(($totalFeedConsumedInKg / 50), 2, false) }} Bag</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold">Feed Consumed (Kg):</span>
-                            <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
+                            <span>{{ $totalFeedConsumedInKg }} kg</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold">Feed Consum Per Chicken (Kg):</span>
-                            <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
+                            <span>{{ showAmount(($totalFeedConsumedInKg / ($batchInfo->total_chickens - $totalDeaths)), 2, false) }}kg</span>
+                        </li>
+                         <li class="list-group-item d-flex justify-content-between">
+                            <span class="fw-bold">Over Feed:</span>
+                            <span class="text-danger">{{ $tergetFeedInKg < $totalFeedConsumedInKg ?  $totalFeedConsumedInKg - $tergetFeedInKg  . "kg " . "(" . (($totalFeedConsumedInKg / 50) - ($tergetFeedInKg / 50)) ." Bag)" : 0  }}</span>
                         </li>
                         <li class="list-group-item d-flex justify-content-between">
                             <span class="fw-bold">Feed Consumption %</span>
@@ -245,89 +257,181 @@
         </div>
 
 
-        {{-- expense info start --}}
-<div class="col-md-8 mt-5">
-    <div class="card shadow-sm rounded-4">
-        <div class="card-header bg-success text-white d-flex align-items-center justify-content-between rounded-top-4">
-            <h5 class="mb-0 font-20 text-white">
-                <i class="fe-shopping-bag me-2"></i> Expense Breakdown
-            </h5>
-            <a href="{{ route('poultry.expense.index', $batchInfo->id) }}" class="badge bg-light text-success font-16">
-                Add Expense
-            </a>
+        <div class="row">
+            {{-- expense info start --}}
+            <div class="col-md-7 mt-5">
+                <div class="card shadow-sm rounded-4">
+                    <div class="card-header bg-success text-white d-flex align-items-center justify-content-between rounded-top-4">
+                        <h5 class="mb-0 font-20 text-white">
+                            <i class="fe-shopping-bag me-2"></i> Expense Breakdown
+                        </h5>
+                        <a href="{{ route('poultry.expense.index', $batchInfo->id) }}" class="badge bg-light text-success font-16">
+                            Add Expense
+                        </a>
+                    </div>
+
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            @foreach ($expenses as $expense)
+                                @if($expense['category'] == 'chickens')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Chickens</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'feed')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Feed</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'medicine')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Medicine</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'transportation')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Transportation</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'bedding')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Bedding</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'labor')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Labor</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'utilities')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Utilities</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'death_loss')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold text-danger">Death Loss</span>
+                                        <span class="text-danger">{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'bio_security')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Bio Security</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'miscellaneous')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Miscellaneous</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'bad_debt')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Bad Debt</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @elseif($expense['category'] == 'other')
+                                    <li class="list-group-item d-flex justify-content-between">
+                                        <span class="fw-bold">Others</span>
+                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
+                                    </li>
+                                @endif
+                            @endforeach
+                            <li class="list-group-item d-flex justify-content-between  mt-2">
+                                <span class="fw-bold fs-5">Total Expense</span>
+                                <span class="fw-bold fs-5 text-success">
+                                    {{ $totalExpenses ?? 0 }} tk
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {{-- expense info end --}}
+
+
+            <div class="col-md-5 row">
+                {{-- Sales Overview start --}}
+                <div class="col-md-12 mt-5">
+                    <div class="card shadow-sm rounded-4">
+                        <div class="card-header bg-warning text-white d-flex align-items-center justify-content-between rounded-4">
+                            <h5 class="mb-0  text-white  font-18"><i class="fe-shopping-bag me-2 text-white"></i> Sales Overview</h5>
+                            {{-- <a href="{{ route('death.list', $batchInfo->id) }}" class="badge bg-light text-info font-16">View Feed </a> --}}
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Total Sales:</span>
+                                    <span>{{ showAmount(( 10 ), 2, false) ?? 'n/a' }} Bag</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Paid Amount:</span>
+                                    <span>{{ showAmount(($totalFeedConsumedInKg / 50), 2, false) }} Bag</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Due:</span>
+                                    <span>{{ $totalFeedConsumedInKg }} kg</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Sales Quantity:</span>
+                                    <span>{{ showAmount(($totalFeedConsumedInKg / ($batchInfo->total_chickens - $totalDeaths)), 2, false) }}kg</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Total Weight:</span>
+                                    <span class="text-danger">{{ $tergetFeedInKg < $totalFeedConsumedInKg ?  $totalFeedConsumedInKg - $tergetFeedInKg  . "kg " . "(" . (($totalFeedConsumedInKg / 50) - ($tergetFeedInKg / 50)) ." Bag)" : 0  }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Average Weight (kg):</span>
+                                    <span class="text-danger">{{ $tergetFeedInKg < $totalFeedConsumedInKg ?  $totalFeedConsumedInKg - $tergetFeedInKg  . "kg " . "(" . (($totalFeedConsumedInKg / 50) - ($tergetFeedInKg / 50)) ." Bag)" : 0  }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Feed Consumption %</span>
+                                    <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {{-- Sales Overview end --}}
+
+                {{-- Sales Overview start --}}
+                <div class="col-md-12">
+                    <div class="card shadow-sm rounded-4">
+                        <div class="card-header bg-success text-white d-flex align-items-center justify-content-between rounded-4">
+                            <h5 class="mb-0  text-white  font-18"><i class="fe-shopping-bag me-2 text-white"></i> Financial Summary</h5>
+                            {{-- <a href="{{ route('death.list', $batchInfo->id) }}" class="badge bg-light text-info font-16">View Feed </a> --}}
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Total Sales Revenue:</span>
+                                    <span>{{ showAmount(( 10 ), 2, false) ?? 'n/a' }} Bag</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">(+) Others Revenue:</span>
+                                    <span>{{ showAmount(($totalFeedConsumedInKg / 50), 2, false) }} Bag</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Total Revenue:</span>
+                                    <span>{{ $totalFeedConsumedInKg }} kg</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">(-) Total Cost:</span>
+                                    <span>{{ showAmount(($totalFeedConsumedInKg / ($batchInfo->total_chickens - $totalDeaths)), 2, false) }}kg</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Net Profit/Loss:</span>
+                                    <span class="text-danger">{{ $tergetFeedInKg < $totalFeedConsumedInKg ?  $totalFeedConsumedInKg - $tergetFeedInKg  . "kg " . "(" . (($totalFeedConsumedInKg / 50) - ($tergetFeedInKg / 50)) ." Bag)" : 0  }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Profit Margin</span>
+                                    <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {{-- Sales Overview end --}}
+            </div>
         </div>
-
-        <div class="card-body">
-            <ul class="list-group list-group-flush">
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Chickens</span>
-                    <span>{{ $expenses['chickens'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Feed</span>
-                    <span>{{ $expenses['feed'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Medicine</span>
-                    <span>{{ $expenses['medicine'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Transportation</span>
-                    <span>{{ $expenses['transportation'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Bedding</span>
-                    <span>{{ $expenses['bedding'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Labor</span>
-                    <span>{{ $expenses['labor'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Utilities</span>
-                    <span>{{ $expenses['utilities'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold text-danger">Death Loss</span>
-                    <span class="text-danger">{{ $expenses['death_loss'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Bio Security</span>
-                    <span>{{ $expenses['bio_security'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Miscellaneous</span>
-                    <span>{{ $expenses['miscellaneous'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between">
-                    <span class="fw-bold">Bad Debt</span>
-                    <span>{{ $expenses['bad_debt'] ?? 0 }} tk</span>
-                </li>
-
-                <li class="list-group-item d-flex justify-content-between border-top mt-2">
-                    <span class="fw-bold fs-5">Total Expense</span>
-                    <span class="fw-bold fs-5 text-success">
-                        {{ $totalExpense ?? 0 }} tk
-                    </span>
-                </li>
-
-            </ul>
-        </div>
-    </div>
-</div>
-{{-- expense info end --}}
-
         
     </div>
 
@@ -341,6 +445,9 @@
                         <div class="text-end mb-3">
                                 <a href="{{ route('invoice.create',1) }}" class="btn btn-primary waves-effect waves-light">
                                     Add New Invoice
+                                </a>
+                                <a href="{{ route('poultry.expense.index', $batchInfo->id) }}" class="badge bg-light text-success font-16">
+                                    Make a Sale
                                 </a>
                         </div>
                     @endcan

@@ -102,7 +102,7 @@
                                     {{-- Chicken Grade --}}
                                     <div class="col-md-4" style="margin-top: 35px;">
                                         <label>
-                                            <input type="radio" name="chicken_grade" value="A"> A
+                                            <input type="radio" name="chicken_grade" checked value="A"> A
                                         </label>
                                         <label>
                                             <input type="radio" name="chicken_grade" value="B"> B
@@ -141,7 +141,6 @@
                                     <div class="mb-3 col-md-4">
                                         <label for="terget_feed_unit" class="form-label">Unit(not required!)</label>
                                         <select name="terget_feed_unit" class="form-control">
-                                            <option value="">Select Unit</option>
                                             <option value="bag" @selected(old('terget_feed_unit', $batch->terget_feed_unit ?? '') == 'bag')>Bag</option>
                                             <option value="kg" @selected(old('terget_feed_unit', $batch->terget_feed_unit ?? '') == 'kg')>KG</option>
                                         </select>

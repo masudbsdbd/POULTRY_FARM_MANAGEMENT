@@ -190,8 +190,8 @@
                             <label for="unit">Unit <span class="text-danger">*</span></label>
                             <select class="form-control" name="unit" required>
                                 <option value="bag">Bag</option>
-                                <option value="piece">Piece</option>
                                 <option value="kg">Kg</option>
+                                <option value="piece">Piece</option>
                                 <option value="litre">Litre</option>
                                 <option value="gram">Gram</option>
                                 <option value="bottle">Bottle</option>
@@ -318,8 +318,8 @@
                             <label>Unit <span class="text-danger">*</span></label>
                             <select class="form-control" id="edit_unit" name="unit" required>
                                 <option value="bag">Bag</option>
-                                <option value="piece">Piece</option>
                                 <option value="kg">Kg</option>
+                                <option value="piece">Piece</option>
                                 <option value="litre">Litre</option>
                                 <option value="gram">Gram</option>
                                 <option value="bottle">Bottle</option>
