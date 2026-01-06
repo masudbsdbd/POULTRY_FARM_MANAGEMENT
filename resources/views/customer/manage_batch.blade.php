@@ -354,7 +354,7 @@
                     <div class="card shadow-sm rounded-4">
                         <div class="card-header bg-warning text-white d-flex align-items-center justify-content-between rounded-4">
                             <h5 class="mb-0  text-white  font-18"><i class="fe-shopping-bag me-2 text-white"></i> Sales Overview</h5>
-                            {{-- <a href="{{ route('death.list', $batchInfo->id) }}" class="badge bg-light text-info font-16">View Feed </a> --}}
+                            <a href="{{ route('poultry.sale.index', $batchInfo->id) }}" class="badge bg-light text-info font-16">Make a Sale</a>
                         </div>
                         <div class="card-body">
                             <ul class="list-group list-group-flush">

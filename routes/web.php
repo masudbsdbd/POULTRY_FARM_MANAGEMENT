@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\PoultryBatchController;
+use App\Http\Controllers\PoultrySaleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
@@ -554,4 +555,11 @@ Route::middleware('authenticated')->group(function () {
     //     Route::put('/{expense}', [PoultryExpenseController::class, 'update'])->name('update');
     //     Route::delete('/{expense}', [PoultryExpenseController::class, 'destroy'])->name('destroy');
     // });
+
+    Route::prefix('poultry/sale')->name('poultry.sale.')->group(function () {
+        Route::get('/{batch_id}', [PoultrySaleController::class, 'index'])->name('index');
+        Route::post('/', [PoultrySaleController::class, 'store'])->name('store');
+        Route::put('/{sale}', [PoultrySaleController::class, 'update'])->name('update');
+        Route::delete('/{sale}', [PoultrySaleController::class, 'destroy'])->name('destroy');
+    });
 });
