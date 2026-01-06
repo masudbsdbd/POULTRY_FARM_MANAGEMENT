@@ -14748,6 +14748,8 @@ namespace App\Models {
      * @property mixed $sale_type
      * @property int $batch_id
      * @property int $id
+     * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PoultrySalesPayment> $payments
+     * @property-read int|null $payments_count
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySale>|PoultrySale whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySale>|PoultrySale whereBatchId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySale>|PoultrySale whereSaleType($value)
@@ -15062,8 +15064,11 @@ namespace App\Models {
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property float $amount
      * @property int $sale_id
+     * @property date:d M Y|null $payment_date
      * @property int $id
+     * @property-read \App\Models\PoultrySale $sale
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySalesPayment>|PoultrySalesPayment whereId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultrySalesPayment>|PoultrySalesPayment wherePaymentDate($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySalesPayment>|PoultrySalesPayment whereSaleId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySalesPayment>|PoultrySalesPayment whereAmount($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySalesPayment>|PoultrySalesPayment whereCreatedAt($value)

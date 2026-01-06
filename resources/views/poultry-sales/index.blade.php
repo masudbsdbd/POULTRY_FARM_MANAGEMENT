@@ -8,19 +8,202 @@
 <div class="container-fluid">
     @include('layouts.shared.page-title', ['title' => 'Sales', 'subtitle' => 'Poultry Sales'])
 
+    <!-- Summary Cards -->
+    <div class="col-md-6" style="margin: 10px;">
+        <a href="{{ route('customer.manageBatch', $bathInfo->id) }}" class="btn btn-info">
+            <i class="mdi mdi-arrow-left"></i> Back
+        </a>
+    </div>
+    <div class="row mb-4">
+        @php
+            $totalSales = $sales->count();
+            $totalAmount = $sales->sum('total_amount');
+            $totalPaid = $sales->sum('paid_amount');
+            $totalDue = $totalAmount - $totalPaid;
+
+            // Total Pieces & KG
+            $totalPieces = $sales->sum('quantity');
+            $totalKg = $sales->where('sale_type', 'by_weight')->sum('weight_kg');
+
+            // Batch & Customer Info (assuming you have relations)
+            $batchName = $bathInfo->batch_name ?? 'Unknown Batch';
+            $customerName = $bathInfo->customer->name ?? 'Walk-in Customer'; // যদি customer relation থাকে
+        @endphp
+
+        <!-- Batch Info -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2" style="border-radius: 10px;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Batch
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ $batchName }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="mdi mdi-clipboard-text-outline fs-2 text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Customer -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2" style="border-radius: 10px;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Customer
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ $customerName }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="mdi mdi-account fs-2 text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Sales Count -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2" style="border-radius: 10px;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Sales
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ $totalSales }} times
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="mdi mdi-cart-outline fs-2 text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Amount -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2" style="border-radius: 10px;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Total Sale Amount
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ number_format($totalAmount, 2) }} ৳
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="mdi mdi-cash-multiple fs-2 text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paid & Due -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2" style="border-radius: 10px;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Paid Amount
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-success">
+                                {{ number_format($totalPaid, 2) }} ৳
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="mdi mdi-check-circle fs-2 text-success"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2" style="border-radius: 10px;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Due Amount
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-danger">
+                                {{ number_format($totalDue, 2) }} ৳
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="mdi mdi-alert-circle fs-2 text-danger"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Pieces -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2" style="border-radius: 10px;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Sold (Pieces)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ number_format($totalPieces) }} pcs
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="mdi mdi-counter fs-2 text-info"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total KG -->
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-purple shadow h-100 py-2" style="border-radius: 10px;">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-purple text-uppercase mb-1">
+                                Sold (Weight)
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ number_format($totalKg, 2) }} kg
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="mdi mdi-weight-kilogram fs-2 text-purple"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div class="row">
         <div class="col-12">
             <div class="card">
-                <div class="col-md-6" style="margin: 10px;">
-                    <a href="{{ route('customer.manageBatch', $bathInfo->id) }}" class="btn btn-info">
-                        <i class="mdi mdi-arrow-left"></i> Back
-                    </a>
-                </div>
-
                 <div class="card-body">
                     <div class="d-flex justify-content-between">
                         <h4 class="header-title">Sales Records</h4>
-                        <button type="button" class="btn btn-primary createSaleBtn">Add New Sale</button>
+                        <button type="button" class="btn btn-primary createSaleBtn mb-3">Add New Sale</button>
                     </div>
 
                     <table id="basic-datatables" class="table dt-responsive nowrap w-100">
@@ -35,6 +218,7 @@
                                 <th>Paid</th>
                                 <th>Status</th>
                                 <th>Channel</th>
+                                <th>Payments</th>
                                 <th class="text-end">Action</th>
                             </tr>
                         </thead>
@@ -52,6 +236,12 @@
                                     <td>{{ number_format($sale->paid_amount, 2) }}</td>
                                     <td><span class="badge bg-{{ $sale->payment_status == 'paid' ? 'success' : ($sale->payment_status == 'partial' ? 'warning' : 'danger') }}">{{ ucfirst($sale->payment_status) }}</span></td>
                                     <td>{{ ucfirst($sale->sales_channel) }}</td>
+                                    <td>
+                                        <!-- Sales table এ Action column এ -->
+                                        <a href="{{ route('poultry.sale.payments', $sale->id) }}" class="btn btn-info btn-sm">
+                                            <i class="mdi mdi-cash-multiple"></i> Payments
+                                        </a>
+                                    </td>
                                     <td class="text-end">
                                         <button type="button" class="btn btn-primary editSaleBtn"
                                             data-id="{{ $sale->id }}"

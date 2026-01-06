@@ -25,4 +25,10 @@ class PoultrySale extends Model
         'sale_date' => 'date',
         'payment_date' => 'date',
     ];
+
+
+    public function payments()
+    {
+        return $this->hasMany(PoultrySalesPayment::class, 'sale_id');
+    }
 }

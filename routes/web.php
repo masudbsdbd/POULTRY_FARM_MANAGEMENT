@@ -561,5 +561,8 @@ Route::middleware('authenticated')->group(function () {
         Route::post('/', [PoultrySaleController::class, 'store'])->name('store');
         Route::put('/{sale}', [PoultrySaleController::class, 'update'])->name('update');
         Route::delete('/{sale}', [PoultrySaleController::class, 'destroy'])->name('destroy');
+        Route::get('/payments/{sale}', [PoultrySaleController::class, 'getPayments'])->name('payments');
+        Route::post('/payment/create/{sale}', [PoultrySaleController::class, 'createPayments'])->name('payment.store');
+        Route::delete('/payment/delete/{sale}', [PoultrySaleController::class, 'paymentDelete'])->name('payment.delete');
     });
 });

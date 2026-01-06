@@ -15,6 +15,16 @@
 
     @include('layouts.shared.page-title', ['title' => $pageTitle ?? "All Invoices", 'subtitle' => 'Quotations'])
 
+     @php
+        $totalSalesRevenue = $sales->sum('total_amount');
+        $otherIncome = 0;
+        $totalRevenue = $totalSalesRevenue + $otherIncome;
+        $totalExpense = $expenses->sum('total_expense');
+        $netProfit = $totalRevenue - $totalExpense;
+        $isProfit = $netProfit >= 0;
+        $profitMargin = $totalRevenue > 0 ? round(($netProfit / $totalRevenue) * 100, 2) : 0;
+    @endphp
+    
     {{-- dashboard cards --}}
     <div class="row g-3">
          <div class="col-md-6 col-xl-4">
@@ -22,166 +32,298 @@
         </div>
         <div class="col-md-6 col-xl-4"></div><div class="col-md-6 col-xl-4"></div>
 
-        <div class="col-md-6 col-xl-4">
-            <div class="widget-rounded-circle card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="avatar-lg rounded-circle bg-soft-primary border-primary border">
-                                <i class="fe-heart font-22 avatar-title text-primary"></i>
+        <div class="col-md-6 col-xl-3">
+            <div class="card shadow-sm border-0 rounded-4  widget-rounded-circle">
+                <div class="card-body py-4">
+                    <div class="row align-items-center">
+                        <div class="col-5 text-center">
+                            <div class="avatar-lg rounded-circle bg-soft-primary border border-primary d-flex align-items-center justify-content-center mx-auto">
+                                <i class="fe-heart fs-3 text-primary"></i>
                             </div>
                         </div>
-                        <div class="col-6">
-                            <div class="text-end">
-                                <h3 class="text-dark mt-1">
-                                    <span data-plugin="counterup">
-                                        <span id="total-quot-amount">{{ $batchInfo->total_chickens }}
-                                        </span>
-                                    </span>
-                                </h3>
-                                <p class="text-muted mb-1 text-truncate">Total Chickens</p>
-                            </div>
+                        <div class="col-7 text-end">
+                            <h3 class="fw-bold mb-1">
+                                <span data-plugin="counterup" id="total-quot-amount">
+                                    {{ $batchInfo->total_chickens }}
+                                </span>
+                            </h3>
+                            <p class="text-muted mb-0 text-uppercase small">Total Chickens</p>
                         </div>
-                    </div> <!-- end row-->
-                </div>
-            </div> <!-- end widget-rounded-circle-->
-        </div> <!-- end col-->
-
-        <div class="col-md-6 col-xl-4">
-            <div class="widget-rounded-circle card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="avatar-lg rounded-circle bg-soft-success border-success border">
-                                <i class="fe-shopping-cart font-22 avatar-title text-success"></i>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="text-end">
-                                <h3 class="text-dark mt-1">
-                                    <span data-plugin="counterup">
-                                        <span id="total-invoiced-amount">
-                                            @php
-                                               $daysOld =  floor($batchInfo->batch_start_date->diffInDays($batchInfo->batch_close_date ?? now()));
-                                            @endphp
-                                            {{ 
-                                                $daysOld
-                                            }}
-                                        </span>
-                                    </span>
-                                </h3>
-                                <p class="text-muted mb-1 text-truncate">Days Old</p>
-                            </div>
-                        </div>
-                    </div> <!-- end row-->
-                </div>
-            </div> <!-- end widget-rounded-circle-->
-        </div> <!-- end col-->
-
-        <div class="col-md-6 col-xl-4">
-            <div class="widget-rounded-circle card">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-6">
-                            <div class="avatar-lg rounded-circle bg-soft-info border-info border">
-                                <i class="fe-shopping-bag font-22 avatar-title text-info"></i>
-
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="text-end">
-                                <h3 class="text-dark mt-1">
-                                    <span id="total-not-invoiced-amount">
-                                        {{ round(($totalDeaths / $batchInfo->total_chickens) * 100) }}%
-                                    </span>
-                                </h3>
-                                <p class="text-danger mb-1 text-truncate">Mortality Rate</p>
-                            </div>
-                        </div>
-                    </div> <!-- end row-->
-                </div>
-            </div> <!-- end widget-rounded-circle-->
-        </div> <!-- end col-->
-    </div> <!-- end col-->
-
-
-    <div class="row">
-        {{-- batch info start --}}
-        <div class="col-md-6">
-            <div class="card shadow-sm  rounded-4">
-                <div class="card-header bg-success text-white d-flex align-items-center justify-content-between  rounded-4">
-                    <h5 class="mb-0  font-20 text-white"><i class="fe-shopping-bag me-2 text-white"></i> Batch Information</h5>
-                    <span class="badge bg-light text-info">{{ $batchInfo->batch_name }}</span>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Name:</span>
-                            <span>{{ $batchInfo->batch_name }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Batch Number:</span>
-                            <span>{{ $batchInfo->batch_number ?? 'n/a' }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Chicken Type:</span>
-                            <span>{{ $batchInfo->chicken_type }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Total Chickens:</span>
-                            <span>{{ $batchInfo->total_chickens }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Price Per Chicken:</span>
-                            <span>{{ number_format($batchInfo->price_per_chicken, 2) }} tk</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <span class="fw-bold">Grade:</span>
-                            <span>
-                                @if($batchInfo->chicken_grade == 'A')
-                                    <span class="badge bg-success font-16">A</span>
-                                @elseif($batchInfo->chicken_grade == 'B')
-                                    <span class="badge bg-warning font-16">B</span>
-                                @elseif($batchInfo->chicken_grade == 'C')
-                                    <span class="badge bg-danger font-16">C</span>
-                                @elseif($batchInfo->chicken_grade == 'D')
-                                    <span class="badge bg-dark font-16">D</span>
-                                @endif
-                            </span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Hatchery Name:</span>
-                            <span>{{ $batchInfo->hatchery_name ?? 'n/a' }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Shed Number:</span>
-                            <span>{{ $batchInfo->shed_number ?? 'n/a' }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Target Feed Qty:</span>
-                            <span>{{ $batchInfo->target_feed_qty ?? 'n/a' }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Target Feed Unit:</span>
-                            <span>{{ $batchInfo->terget_feed_unit ?? 'n/a' }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Batch Start Date:</span>
-                            <span>{{ $batchInfo->batch_start_date ?? 'not-started' }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Batch Close Date:</span>
-                            <span>{{ $batchInfo->batch_close_date ?? 'not-closed' }}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between">
-                            <span class="fw-bold">Description:</span>
-                            <span>{{ $batchInfo->batch_description ?? 'n/a' }}</span>
-                        </li>
-                    </ul>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div class="col-md-6 col-xl-3">
+            <div class="card shadow-sm border-0 rounded-4  widget-rounded-circle">
+                <div class="card-body py-4">
+                    <div class="row align-items-center">
+                        <div class="col-5 text-center">
+                            <div class="avatar-lg rounded-circle bg-soft-success border border-success d-flex align-items-center justify-content-center mx-auto">
+                                <i class="fe-calendar fs-3 text-success"></i>
+                            </div>
+                        </div>
+                        <div class="col-7 text-end">
+                            <h3 class="fw-bold mb-1">
+                                <span data-plugin="counterup" id="total-invoiced-amount">
+                                    @php
+                                        $daysOld = floor(
+                                            $batchInfo->batch_start_date->diffInDays(
+                                                $batchInfo->batch_close_date ?? now()
+                                            )
+                                        );
+                                    @endphp
+                                    {{ $daysOld }}
+                                </span>
+                            </h3>
+                            <p class="text-muted mb-0 text-uppercase small">Days Old</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <div class="card shadow-sm border-0 rounded-4  widget-rounded-circle">
+                <div class="card-body py-4">
+                    <div class="row align-items-center">
+                        <div class="col-5 text-center">
+                            <div class="avatar-lg rounded-circle bg-soft-danger border border-danger d-flex align-items-center justify-content-center mx-auto">
+                                <i class="fe-trending-down fs-3 text-danger"></i>
+                            </div>
+                        </div>
+                        <div class="col-7 text-end">
+                            <h3 class="fw-bold mb-1">
+                                <span id="total-not-invoiced-amount">
+                                    {{ round(($totalDeaths / $batchInfo->total_chickens) * 100) }}%
+                                </span>
+                            </h3>
+                            <p class="text-danger mb-0 text-uppercase small">Mortality Rate</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl-3">
+            <div class="card shadow-sm border-0 rounded-4  widget-rounded-circle">
+                <div class="card-body py-4">
+                    <div class="row align-items-center">
+                        <div class="col-5 text-center">
+                            <div class="avatar-lg rounded-circle bg-soft-info border border-info d-flex align-items-center justify-content-center mx-auto">
+                                <i class="fe-trending-up fs-3 text-info"></i>
+                            </div>
+                        </div>
+                        <div class="col-7 text-end">
+                            <h3 class="fw-bold mb-1">
+                                <span id="total-not-invoiced-amount">
+                                    {{ $profitMargin }}
+                                </span>
+                            </h3>
+                            <p class="text-info mb-0 text-uppercase small">Profit</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div> <!-- end col-->
+
+
+    <div class="row mt-3">
+        {{-- batch info start --}}
+        <div class="col-md-6">
+            <div class="">
+                <div class="card shadow border-0 rounded-4 h-100">
+                    <div class="card-header bg-success bg-gradient text-white d-flex align-items-center justify-content-between rounded-4 py-3">
+                        <h5 class="mb-0 fw-semibold">
+                            <i class="fe-shopping-bag me-2"></i> Batch Information
+                        </h5>
+                        <span class="badge bg-white text-success px-3 py-2 rounded-pill">
+                            {{ $batchInfo->batch_name }}
+                        </span>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <ul class="list-group list-group-flush">
+
+                            @php
+                                $na = '<span class="text-muted">n/a</span>';
+                            @endphp
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Name</span>
+                                <span class="fw-medium">{{ $batchInfo->batch_name }}</span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Batch Number</span>
+                                <span>{!! $batchInfo->batch_number ?? $na !!}</span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Chicken Type</span>
+                                <span>{{ $batchInfo->chicken_type }}</span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Total Chickens</span>
+                                <span class="badge bg-info-subtle text-info px-3 py-2">
+                                    {{ $batchInfo->total_chickens }}
+                                </span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Price Per Chicken</span>
+                                <span class="fw-semibold text-success">
+                                    {{ number_format($batchInfo->price_per_chicken, 2) }} tk
+                                </span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Grade</span>
+                                <span>
+                                    @if($batchInfo->chicken_grade == 'A')
+                                        <span class="badge bg-success px-3 py-2">A</span>
+                                    @elseif($batchInfo->chicken_grade == 'B')
+                                        <span class="badge bg-warning text-dark px-3 py-2">B</span>
+                                    @elseif($batchInfo->chicken_grade == 'C')
+                                        <span class="badge bg-danger px-3 py-2">C</span>
+                                    @elseif($batchInfo->chicken_grade == 'D')
+                                        <span class="badge bg-dark px-3 py-2">D</span>
+                                    @endif
+                                </span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Hatchery Name</span>
+                                <span>{!! $batchInfo->hatchery_name ?? $na !!}</span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Shed Number</span>
+                                <span>{!! $batchInfo->shed_number ?? $na !!}</span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Target Feed Qty</span>
+                                <span>{!! $batchInfo->target_feed_qty ?? $na !!}</span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Target Feed Unit</span>
+                                <span>{!! $batchInfo->terget_feed_unit ?? $na !!}</span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Batch Start Date</span>
+                                <span class="badge bg-light text-dark">
+                                    {{ $batchInfo->batch_start_date ?? 'not-started' }}
+                                </span>
+                            </li>
+
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-4 py-3">
+                                <span class="fw-semibold text-secondary">Batch Close Date</span>
+                                <span class="badge bg-light text-dark">
+                                    {{ $batchInfo->batch_close_date ?? 'not-closed' }}
+                                </span>
+                            </li>
+
+                            <li class="list-group-item px-4 py-3">
+                                <span class="fw-semibold text-secondary d-block mb-1">Description</span>
+                                <span class="text-muted">
+                                    {{ $batchInfo->batch_description ?? 'n/a' }}
+                                </span>
+                            </li>
+
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Expense Breakdown Start --}}
+            <div class="col-md-12 mt-4">
+                <div class="card shadow-lg rounded-4 border-0 overflow-hidden">
+                    <div class="card-header bg-gradient-danger text-white d-flex align-items-center justify-content-between py-3">
+                        <h5 class="mb-0 font-20">
+                            <i class="fe-dollar-sign me-2"></i> Expense Breakdown
+                        </h5>
+                        <a href="{{ route('poultry.expense.index', $batchInfo->id) }}" class="btn btn-light btn-sm rounded-pill px-4">
+                            <i class="fe-plus me-1"></i> Add Expense
+                        </a>
+                    </div>
+
+                    <div class="card-body p-4 bg-light">
+                        @php
+                            $totalExpenses = $expenses->sum('total_expense');
+
+                            // ক্যাটাগরি অনুযায়ী সুন্দর নাম + কালার
+                            $categoryLabels = [
+                                'chickens'        => ['name' => 'Chickens Purchase',     'icon' => 'fe-package',      'color' => 'primary'],
+                                'feed'            => ['name' => 'Feed Cost',             'icon' => 'fe-truck',        'color' => 'warning'],
+                                'medicine'        => ['name' => 'Medicine & Vaccine',    'icon' => 'fe-activity',     'color' => 'info'],
+                                'transportation'  => ['name' => 'Transportation',        'icon' => 'fe-truck',        'color' => 'secondary'],
+                                'bedding'         => ['name' => 'Bedding',               'icon' => 'fe-home',         'color' => 'dark'],
+                                'labor'           => ['name' => 'Labor Cost',            'icon' => 'fe-users',        'color' => 'success'],
+                                'utilities'       => ['name' => 'Utilities (Electricity, Water)', 'icon' => 'fe-zap', 'color' => 'warning'],
+                                'death_loss'      => ['name' => 'Death Loss',            'icon' => 'fe-heart',        'color' => 'danger'],
+                                'bio_security'    => ['name' => 'Bio Security',          'icon' => 'fe-shield',       'color' => 'info'],
+                                'miscellaneous'   => ['name' => 'Miscellaneous',         'icon' => 'fe-grid',         'color' => 'secondary'],
+                                'bad_debt'        => ['name' => 'Bad Debt',              'icon' => 'fe-alert-circle', 'color' => 'danger'],
+                                'other'           => ['name' => 'Other Expenses',        'icon' => 'fe-more-horizontal', 'color' => 'dark'],
+                            ];
+                        @endphp
+
+                        <div class="row g-3">
+                            @forelse($expenses as $expense)
+                                @php
+                                    $cat = $expense->category;
+                                    $label = $categoryLabels[$cat] ?? ['name' => ucfirst(str_replace('_', ' ', $cat)), 'icon' => 'fe-tag', 'color' => 'secondary'];
+                                    $amount = $expense->total_expense;
+                                @endphp
+
+                                <div class="col-12">
+                                    <div class="d-flex align-items-center justify-content-between p-2 bg-white rounded-3 shadow-sm">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3">
+                                                <i class="fe {{ $label['icon'] }} text-{{ $label['color'] }} fs-3"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="mb-0 fw-bold">{{ $label['name'] }}</h6>
+                                                <small class="text-muted">
+                                                    @if($amount > 0)
+                                                        {{ number_format(($amount / $totalExpenses) * 100, 1) }}% of total
+                                                    @endif
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <h5 class="mb-0 fw-bold text-{{ $label['color'] }}">
+                                                {{ number_format($amount, 2) }} ৳
+                                            </h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            @empty
+                                <div class="col-12 text-center py-5">
+                                    <i class="fe-info fs-1 text-muted mb-3"></i>
+                                    <p class="text-muted">No expenses recorded yet for this batch.</p>
+                                </div>
+                            @endforelse
+                        </div>
+
+                        <!-- Total Expense -->
+                        <div class="mt-4 p-4 bg-danger text-white rounded-3 text-center shadow">
+                            <h5 class="mb-2">Total Expense</h5>
+                            <h3 class="mb-0 fw-bold">{{ number_format($totalExpenses, 2) }} ৳</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{-- Expense Breakdown End --}}
+        </div>
         {{-- batch info end --}}
+
 
 
         <div class="col-md-6">
@@ -254,293 +396,232 @@
                 </div>
             </div>
             {{-- Feed Management end --}}
-        </div>
 
-
-        <div class="row">
-            {{-- expense info start --}}
-            <div class="col-md-7 mt-5">
-                <div class="card shadow-sm rounded-4">
-                    <div class="card-header bg-success text-white d-flex align-items-center justify-content-between rounded-top-4">
-                        <h5 class="mb-0 font-20 text-white">
-                            <i class="fe-shopping-bag me-2"></i> Expense Breakdown
+            {{-- Sales Overview Start --}}
+            <div class="col-md-12 mt-2">
+                <div class="card shadow-sm rounded-4 border-0">
+                    <div class="card-header bg-gradient-warning text-white d-flex align-items-center justify-content-between rounded-top-4 py-3">
+                        <h5 class="mb-0 font-18">
+                            <i class="fe-shopping-bag me-2"></i> Sales Overview
                         </h5>
-                        <a href="{{ route('poultry.expense.index', $batchInfo->id) }}" class="badge bg-light text-success font-16">
-                            Add Expense
+                        <a href="{{ route('poultry.sale.index', $batchInfo->id) }}" class="btn btn-light btn-sm rounded-pill px-4">
+                                
+                        </a>
+                        <a href="{{ route('poultry.sale.index', $batchInfo->id) }}" class="btn btn-sm btn-success text-white font-16">
+                            <i class="fe-plus me-1"></i>
+                            Make a Sale
                         </a>
                     </div>
 
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            @foreach ($expenses as $expense)
-                                @if($expense['category'] == 'chickens')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Chickens</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'feed')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Feed</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'medicine')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Medicine</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'transportation')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Transportation</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'bedding')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Bedding</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'labor')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Labor</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'utilities')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Utilities</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'death_loss')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold text-danger">Death Loss</span>
-                                        <span class="text-danger">{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'bio_security')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Bio Security</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'miscellaneous')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Miscellaneous</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'bad_debt')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Bad Debt</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @elseif($expense['category'] == 'other')
-                                    <li class="list-group-item d-flex justify-content-between">
-                                        <span class="fw-bold">Others</span>
-                                        <span>{{ $expense['total_expense'] ?? 0 }} tk</span>
-                                    </li>
-                                @endif
-                            @endforeach
-                            <li class="list-group-item d-flex justify-content-between  mt-2">
-                                <span class="fw-bold fs-5">Total Expense</span>
-                                <span class="fw-bold fs-5 text-success">
-                                    {{ $totalExpenses ?? 0 }} tk
-                                </span>
-                            </li>
-                        </ul>
+                    <div class="card-body p-4">
+                        @php
+                            // Sales Summary
+                            $totalSalesCount = $sales->count();
+                            $totalSaleAmount = $sales->sum('total_amount');
+                            $totalPaid = $sales->sum('paid_amount');
+                            $totalDue = $totalSaleAmount - $totalPaid;
+
+                            // Quantity Summary
+                            $totalPiecesSold = $sales->where('sale_type', 'by_piece')->sum('quantity');
+                            $totalKgSold = $sales->where('sale_type', 'by_weight')->sum('weight_kg') ?? 0;
+
+                            // Average Weight per bird (if needed)
+                            $liveBirds = $batchInfo->total_chickens - ($totalDeaths ?? 0);
+                            $avgWeightPerBird = $liveBirds > 0 ? round($totalKgSold / $liveBirds, 3) : 0;
+                        @endphp
+
+                        <div class="row text-center text-md-start">
+                            <!-- Total Sales Count -->
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="text-center">
+                                    <i class="fe-shopping-cart text-warning fs-1 mb-2"></i>
+                                    <h6 class="fw-bold text-muted">Total Sales</h6>
+                                    <h4 class="fw-bold text-dark">{{ $totalSalesCount }} times</h4>
+                                </div>
+                            </div>
+
+                            <!-- Total Sale Amount -->
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="text-center">
+                                    <i class="fe-dollar-sign text-success fs-1 mb-2"></i>
+                                    <h6 class="fw-bold text-muted">Total Sale Amount</h6>
+                                    <h4 class="fw-bold text-success">{{ number_format($totalSaleAmount, 2) }} ৳</h4>
+                                </div>
+                            </div>
+
+                            <!-- Paid & Due -->
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="text-center">
+                                    <i class="fe-check-circle text-primary fs-1 mb-2"></i>
+                                    <h6 class="fw-bold text-muted">Paid Amount</h6>
+                                    <h4 class="fw-bold text-primary">{{ number_format($totalPaid, 2) }} ৳</h4>
+                                </div>
+                            </div>
+
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="text-center">
+                                    <i class="fe-alert-circle text-danger fs-1 mb-2"></i>
+                                    <h6 class="fw-bold text-muted">Due Amount</h6>
+                                    <h4 class="fw-bold text-danger">{{ number_format($totalDue, 2) }} ৳</h4>
+                                </div>
+                            </div>
+
+                            <!-- Sold Pieces -->
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="text-center">
+                                    <i class="fe-package text-info fs-1 mb-2"></i>
+                                    <h6 class="fw-bold text-muted">Sold (Pieces)</h6>
+                                    <h4 class="fw-bold text-info">{{ number_format($totalPiecesSold) }} pcs</h4>
+                                </div>
+                            </div>
+
+                            <!-- Sold Weight -->
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="text-center">
+                                    <i class="fe-weight text-purple fs-1 mb-2"></i>
+                                    <h6 class="fw-bold text-muted">Sold (Weight)</h6>
+                                    <h4 class="fw-bold text-purple">{{ number_format($totalKgSold, 2) }} kg</h4>
+                                </div>
+                            </div>
+
+                            <!-- Average Weight per Bird -->
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="text-center">
+                                    <i class="fe-trending-up text-success fs-1 mb-2"></i>
+                                    <h6 class="fw-bold text-muted">Avg Weight / Bird</h6>
+                                    <h4 class="fw-bold text-success">{{ $avgWeightPerBird }} kg</h4>
+                                    <small class="text-muted">(Live birds: {{ number_format($liveBirds) }})</small>
+                                </div>
+                            </div>
+
+                            <!-- Payment Status Summary -->
+                            <div class="col-lg-3 col-md-6 mb-4">
+                                <div class="text-center">
+                                    <i class="fe-pie-chart text-warning fs-1 mb-2"></i>
+                                    <h6 class="fw-bold text-muted">Payment Status</h6>
+                                    <div class="mt-2">
+                                        <span class="badge bg-success fs-6 me-1">{{ $sales->where('payment_status', 'paid')->count() }} Paid</span>
+                                        <span class="badge bg-warning fs-6 me-1">{{ $sales->where('payment_status', 'partial')->count() }} Partial</span>
+                                        <span class="badge bg-danger fs-6">{{ $sales->where('payment_status', 'due')->count() }} Due</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            {{-- expense info end --}}
+            {{-- Sales Overview End --}}
 
 
-            <div class="col-md-5 row">
-                {{-- Sales Overview start --}}
-                <div class="col-md-12 mt-5">
-                    <div class="card shadow-sm rounded-4">
-                        <div class="card-header bg-warning text-white d-flex align-items-center justify-content-between rounded-4">
-                            <h5 class="mb-0  text-white  font-18"><i class="fe-shopping-bag me-2 text-white"></i> Sales Overview</h5>
-                            <a href="{{ route('poultry.sale.index', $batchInfo->id) }}" class="badge bg-light text-info font-16">Make a Sale</a>
+            {{-- Financial Summary Start - Premium Light Neumorphism Design --}}
+            <div class="col-md-12 mt-3">
+                <div class="card border-1 rounded-5 overflow-hidden" style="background: #f8fafc; box-shadow: 12px 12px 24px #d4d9e0, -12px -12px 24px #ffffff; border-color: #e9ecef;">
+                    
+                    <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between py-5 px-5">
+                        <h4 class="mb-0 text-dark fw-bold d-flex align-items-center">
+                            <i class="fe-bar-chart-2 me-3 fs-3"></i>
+                            Financial Summary
+                        </h4>
+                        <div class="px-4 py-2 rounded-pill fw-semibold text-primary" style="background: #f1f5f9; box-shadow: 4px 4px 8px #d4d9e0, -4px -4px 8px #ffffff;">
+                            Batch Performance
                         </div>
-                        <div class="card-body">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Total Sales:</span>
-                                    <span>{{ showAmount(( 10 ), 2, false) ?? 'n/a' }} Bag</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Paid Amount:</span>
-                                    <span>{{ showAmount(($totalFeedConsumedInKg / 50), 2, false) }} Bag</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Due:</span>
-                                    <span>{{ $totalFeedConsumedInKg }} kg</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Sales Quantity:</span>
-                                    <span>{{ showAmount(($totalFeedConsumedInKg / ($batchInfo->total_chickens - $totalDeaths)), 2, false) }}kg</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Total Weight:</span>
-                                    <span class="text-danger">{{ $tergetFeedInKg < $totalFeedConsumedInKg ?  $totalFeedConsumedInKg - $tergetFeedInKg  . "kg " . "(" . (($totalFeedConsumedInKg / 50) - ($tergetFeedInKg / 50)) ." Bag)" : 0  }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Average Weight (kg):</span>
-                                    <span class="text-danger">{{ $tergetFeedInKg < $totalFeedConsumedInKg ?  $totalFeedConsumedInKg - $tergetFeedInKg  . "kg " . "(" . (($totalFeedConsumedInKg / 50) - ($tergetFeedInKg / 50)) ." Bag)" : 0  }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Feed Consumption %</span>
-                                    <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
-                                </li>
-                            </ul>
+                    </div>
+
+                    <div class="card-body p-5">
+                        <div class="row g-5">
+                            <!-- Sales Revenue -->
+                            <div class="col-lg-6 col-md-6">
+                                <div class="p-3 rounded-4 text-center" style="background: #f8fafc; box-shadow: inset 6px 6px 12px #d4d9e0, inset -6px -6px 12px #ffffff;">
+                                    <div class="icon mb-3 mx-auto rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #f8fafc; box-shadow: 8px 8px 16px #d4d9e0, -8px -8px 16px #ffffff;">
+                                        <i class="fe-shopping-bag fs-3 text-success font-16"></i>
+                                    </div>
+                                    <p class="mb-2 text-muted small text-uppercase fw-bold font-12">Total Sales Revenue</p>
+                                    <h3 class="fw-bold mb-0 text-success font-16">{{ number_format($totalSalesRevenue, 2) }} ৳</h3>
+                                </div>
+                            </div>
+
+                            <!-- Other Income -->
+                            <div class="col-lg-6 col-md-6">
+                                <div class="p-3 rounded-4 text-center" style="background: #f8fafc; box-shadow: inset 6px 6px 12px #d4d9e0, inset -6px -6px 12px #ffffff;">
+                                    <div class="icon mb-3 mx-auto rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #f8fafc; box-shadow: 8px 8px 16px #d4d9e0, -8px -8px 16px #ffffff;">
+                                        <i class="fe-plus-circle fs-3 text-info font-16"></i>
+                                    </div>
+                                    <p class="mb-2 text-muted small text-uppercase fw-bold font-12">(+) Other Income</p>
+                                    <h3 class="fw-bold mb-0 text-info font-16">{{ number_format($otherIncome, 2) }} ৳</h3>
+                                </div>
+                            </div>
+
+                            <!-- Total Revenue -->
+                            <div class="col-lg-6 col-md-6">
+                                <div class="p-3 rounded-4 text-center text-white" style="background: linear-gradient(135deg, #ebc312, #ebc312); box-shadow: 10px 10px 20px #d4d9e0, -10px -10px 20px #ffffff;">
+                                    <i class="fe-arrow-up-right fs-2 mb-3"></i>
+                                    <p class="mb-2 small text-uppercase fw-bold opacity-95 font-12">Total Revenue</p>
+                                    <h2 class="fw-bold mb-0 font-16">{{ number_format($totalRevenue, 2) }} ৳</h2>
+                                </div>  
+                            </div>
+
+                            <!-- Total Expense -->
+                            <div class="col-lg-6 col-md-6">
+                                <div class="p-3 rounded-4 text-center" style="background: #f8fafc; box-shadow: inset 6px 6px 12px #d4d9e0, inset -6px -6px 12px #ffffff;">
+                                    <div class="icon mb-3 mx-auto rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; background: #f8fafc; box-shadow: 8px 8px 16px #d4d9e0, -8px -8px 16px #ffffff;">
+                                        <i class="fe-minus-circle fs-3 text-danger"></i>
+                                    </div>
+                                    <p class="mb-2 text-muted small text-uppercase fw-bold font-12">(-) Total Expense</p>
+                                    <h3 class="fw-bold mb-0 text-danger font-16">{{ number_format($totalExpense, 2) }} ৳</h3>
+                                </div>
+                            </div>
+
+                            <!-- Net Profit / Loss & Profit Margin - Full Width Row -->
+                            <div class="col-12 mt-4">
+                                <div class="row g-4">
+                                    <!-- Net Profit / Loss -->
+                                    <div class="col-md-6">
+                                        <div class="p-5 rounded-5 text-center text-white" style="background: linear-gradient(135deg, {{ $isProfit ? '#22c55e, #16a34a' : '#ef4444, #dc2626' }}); box-shadow: 12px 12px 24px #d4d9e0, -12px -12px 24px #ffffff;">
+                                            <i class="fe-{{ $isProfit ? 'trending-up' : 'trending-down' }} fs-1 mb-4"></i>
+                                            <h4 class="fw-bold mb-3">Net {{ $isProfit ? 'Profit' : 'Loss' }}</h4>
+                                            <h1 class="display-5 fw-bold font-22 text-white">
+                                                {{ $isProfit ? '+' : '-' }}{{ number_format(abs($netProfit), 2) }} ৳
+                                            </h1>
+                                        </div>
+                                    </div>
+
+                                    <!-- Profit Margin -->
+                                    <div class="col-md-6">
+                                        <div class="p-4 rounded-5 text-center" style="background: #f8fafc; box-shadow: inset 10px 10px 20px #d4d9e0, inset -10px -10px 20px #ffffff;">
+                                            <i class="fe-percent fs-1 mb-4 {{ $isProfit ? 'text-success' : 'text-danger' }}"></i>
+                                            <h4 class="fw-bold mb-3 text-muted">Profit Margin</h4>
+                                            <h1 class="display-5 fw-bold font-22 {{ $isProfit ? 'text-success' : 'text-danger' }}">
+                                                {{ $profitMargin }}%
+                                            </h1>
+                                            <small class="text-muted font-12">(Net Profit ÷ Total Revenue)</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Final Message -->
+                        <div class="mt-5 text-center">
+                            @if($isProfit)
+                                <div class="p-3 rounded-5 text-white" style="background: linear-gradient(135deg, #22c55e, #16a34a); box-shadow: 12px 12px 24px #d4d9e0, -12px -12px 24px #ffffff;">
+                                    <i class="fe-thumbs-up fs-1 mb-3"></i>
+                                    <h3 class="fw-bold">Excellent Performance!</h3>
+                                    <p class="fs-5 mb-0">This batch achieved a net profit of {{ number_format(abs($netProfit), 2) }} ৳</p>
+                                </div>
+                            @else
+                                <div class="p-3 rounded-5 text-white" style="background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 12px 12px 24px #d4d9e0, -12px -12px 24px #ffffff;">
+                                    <i class="fe-alert-triangle fs-1 mb-3"></i>
+                                    <h3 class="fw-bold">Attention Required!</h3>
+                                    <p class="fs-5 mb-0">This batch has a loss of {{ number_format(abs($netProfit), 2) }} ৳. Please review expenses.</p>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 </div>
-                {{-- Sales Overview end --}}
-
-                {{-- Sales Overview start --}}
-                <div class="col-md-12">
-                    <div class="card shadow-sm rounded-4">
-                        <div class="card-header bg-success text-white d-flex align-items-center justify-content-between rounded-4">
-                            <h5 class="mb-0  text-white  font-18"><i class="fe-shopping-bag me-2 text-white"></i> Financial Summary</h5>
-                            {{-- <a href="{{ route('death.list', $batchInfo->id) }}" class="badge bg-light text-info font-16">View Feed </a> --}}
-                        </div>
-                        <div class="card-body">
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Total Sales Revenue:</span>
-                                    <span>{{ showAmount(( 10 ), 2, false) ?? 'n/a' }} Bag</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">(+) Others Revenue:</span>
-                                    <span>{{ showAmount(($totalFeedConsumedInKg / 50), 2, false) }} Bag</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Total Revenue:</span>
-                                    <span>{{ $totalFeedConsumedInKg }} kg</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">(-) Total Cost:</span>
-                                    <span>{{ showAmount(($totalFeedConsumedInKg / ($batchInfo->total_chickens - $totalDeaths)), 2, false) }}kg</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Net Profit/Loss:</span>
-                                    <span class="text-danger">{{ $tergetFeedInKg < $totalFeedConsumedInKg ?  $totalFeedConsumedInKg - $tergetFeedInKg  . "kg " . "(" . (($totalFeedConsumedInKg / 50) - ($tergetFeedInKg / 50)) ." Bag)" : 0  }}</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between">
-                                    <span class="fw-bold">Profit Margin</span>
-                                    <span>{{ $batchInfo->total_chickens - $totalDeaths }}</span>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                {{-- Sales Overview end --}}
             </div>
+            {{-- Financial Summary End --}}
         </div>
         
-    </div>
-
-
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body">
-                    @can('invoice-create')
-                        <div class="text-end mb-3">
-                                <a href="{{ route('invoice.create',1) }}" class="btn btn-primary waves-effect waves-light">
-                                    Add New Invoice
-                                </a>
-                                <a href="{{ route('poultry.expense.index', $batchInfo->id) }}" class="badge bg-light text-success font-16">
-                                    Make a Sale
-                                </a>
-                        </div>
-                    @endcan
-
-                    <table id="basic-datatables" class="table dt-responsive nowrap w-100">
-                        <thead>
-                            <tr>
-                                <th>SL</th>
-                                <th>Date</th>
-                                <th>Invoice Number</th>
-                                <th>Percentage</th>
-                                <th>Invoice Amount</th>
-                                <th>Paid Amount</th>
-                                <th>Due Amount</th>
-                                <th>Status</th>
-                                <th class="text-end">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                           <tr>
-                                <td>sdaf</td>
-                                <td>sdaf</td>
-                                <td>sdaf</td>
-                                <td>sdaf</td>
-                                <td>sdaf</td>
-                                <td class="text-success">22
-                                    {{-- {{ number_format($invoice->paid_amount, 2) }} tk --}}
-                                </td>
-                                <td class="text-danger">11</td>
-                                <td>
-                                    <span style="font-size: 13px;" class="badge bg-success">Active</span>
-                                </td>
-                                <td class="text-end">
-                                    <a
-                                        href="#"
-                                        class="btn btn-warning btn-sm"
-                                        title="View Quotation"
-                                    >
-                                            <i class="mdi mdi-eye"></i>
-                                    </a>
-                                    @can('invoice-edit')
-                                        <a href="{{ route('invoice.edit', 1) }}" class="btn btn-primary btn-sm" title="Edit">
-                                            <i class="mdi mdi-pencil"></i>
-                                        </a>
-                                    @endcan
-                                    {{-- <a href="{{ route('challan.all', $invoice->id) }}" class="btn btn-primary btn-sm" title="Create Challan">
-                                        --}}
-                                    <a target="_blank" href="#" class="btn btn-primary btn-sm" title="Print Invoice">
-                                    <i styl class="mdi mdi-printer"></i>
-                                    </a>
-                                    @can('invoice-delete')
-                                        <form action="{{ route('invoice.delete', 1) }}" method="POST" class="d-inline-block" id="deleteForm_{{ 1 }}">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-danger btn-sm" title="Delete"
-                                                onclick="askPassword({{1}})">
-                                                <i class="mdi mdi-delete"></i>
-                                            </button>
-                                        </form>
-                                    @endcan
-                                </td>
-                            </tr>
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="5" class="">
-                                    {{-- <div class="d-flex justify-content-center" style="margin-left: 20px;">
-                                        <span class=" fw-bold">{{ showAmount($totalPaidAmount, 2, false) }} tk</span>
-                                    </div> --}}
-                                </td>
-                                <td colspan="1" class="">
-                                    <div class="d-flex justify-content-start" style="">
-                                        {{-- <span class=" fw-bold">{{ showAmount($totalPaidAmount, 2, false) }} tk</span> --}}
-                                        <span class=" fw-bold">100 tk</span>
-                                    </div>
-                                </td>
-                                <td colspan="1" class="">
-                                    <div class="d-flex justify-content-start" style="">
-                                        <span class=" fw-bold">200 tk</span>
-                                    </div>
-                                </td>
-                                <td colspan="2" class="text-center"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-
-                    {{-- Pagination --}}
-                    {{-- <div class="d-flex justify-content-end mt-3">
-                        {{  isset($invoices) ? $invoices->links() : '' }}
-                    </div> --}}
-                </div>
-            </div>
-        </div>
     </div>
 </div>
 
