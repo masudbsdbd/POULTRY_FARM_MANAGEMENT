@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\PoultryBatchController;
+use App\Http\Controllers\PoultryOthersIncomeController;
 use App\Http\Controllers\PoultrySaleController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RoleController;
@@ -564,5 +565,13 @@ Route::middleware('authenticated')->group(function () {
         Route::get('/payments/{sale}', [PoultrySaleController::class, 'getPayments'])->name('payments');
         Route::post('/payment/create/{sale}', [PoultrySaleController::class, 'createPayments'])->name('payment.store');
         Route::delete('/payment/delete/{sale}', [PoultrySaleController::class, 'paymentDelete'])->name('payment.delete');
+    });
+
+
+    Route::prefix('poultry/others-income')->name('poultry.others-income.')->group(function () {
+        Route::get('/{batch_id}', [PoultryOthersIncomeController::class, 'index'])->name('index');
+        Route::post('/', [PoultryOthersIncomeController::class, 'store'])->name('store');
+        Route::put('/{income}', [PoultryOthersIncomeController::class, 'update'])->name('update');
+        Route::delete('/{income}', [PoultryOthersIncomeController::class, 'destroy'])->name('destroy');
     });
 });

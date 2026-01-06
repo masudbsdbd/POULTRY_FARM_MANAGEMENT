@@ -18,6 +18,7 @@ use App\Models\Income;
 use App\Models\PoultryBatch;
 use App\Models\PoultryChickDeath;
 use App\Models\PoultryExpense;
+use App\Models\PoultryOthersIncome;
 use App\Models\PoultrySale;
 use Illuminate\Support\Facades\DB;
 
@@ -105,10 +106,12 @@ class CustomerController extends Controller
                 return $expense->unit === 'bag' ? $expense->quantity * 50 : ($expense->unit === 'kg' ? $expense->quantity : $expense->quantity * 50);
             });
 
+        $totalOtherIncome = PoultryOthersIncome::where('batch_id', $batch_id)->sum('amount');
+
         $sales = PoultrySale::where('batch_id', $batchInfo->id)->get();
 
 
-        return view('customer.manage_batch', compact('pageTitle', 'batchInfo', 'customerInfo', 'totalDeaths', 'expenses', 'totalExpenses', 'totalFeedConsumedInKg', 'sales'));
+        return view('customer.manage_batch', compact('pageTitle', 'batchInfo', 'customerInfo', 'totalDeaths', 'expenses', 'totalExpenses', 'totalFeedConsumedInKg', 'sales', 'totalOtherIncome'));
     }
 
 

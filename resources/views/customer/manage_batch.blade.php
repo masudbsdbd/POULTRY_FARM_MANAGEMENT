@@ -17,7 +17,7 @@
 
      @php
         $totalSalesRevenue = $sales->sum('total_amount');
-        $otherIncome = 0;
+        $otherIncome = $totalOtherIncome;
         $totalRevenue = $totalSalesRevenue + $otherIncome;
         $totalExpense = $expenses->sum('total_expense');
         $netProfit = $totalRevenue - $totalExpense;
@@ -106,26 +106,34 @@
         </div>
 
         <div class="col-md-6 col-xl-3">
-            <div class="card shadow-sm border-0 rounded-4  widget-rounded-circle">
-                <div class="card-body py-4">
-                    <div class="row align-items-center">
-                        <div class="col-5 text-center">
-                            <div class="avatar-lg rounded-circle bg-soft-info border border-info d-flex align-items-center justify-content-center mx-auto">
-                                <i class="fe-trending-up fs-3 text-info"></i>
-                            </div>
-                        </div>
-                        <div class="col-7 text-end">
-                            <h3 class="fw-bold mb-1">
-                                <span id="total-not-invoiced-amount">
-                                    {{ $profitMargin }}
-                                </span>
-                            </h3>
-                            <p class="text-info mb-0 text-uppercase small">Profit</p>
-                        </div>
+    <div class="card shadow-sm border-0 rounded-4 widget-rounded-circle">
+        <div class="card-body py-4">
+            <div class="row align-items-center">
+                <div class="col-5 text-center">
+                    @php
+                        $isProfit = $netProfit >= 0;
+                        $amount = abs($netProfit);
+                        $icon = $isProfit ? 'fe-trending-up' : 'fe-trending-down';
+                        $color = $isProfit ? 'success' : 'danger';
+                        $label = $isProfit ? 'Profit' : 'Loss';
+                    @endphp
+
+                    <div class="avatar-lg rounded-circle bg-soft-{{ $color }} border border-{{ $color }} d-flex align-items-center justify-content-center mx-auto">
+                        <i class="{{ $icon }} fs-3 text-{{ $color }}"></i>
                     </div>
+                </div>
+                <div class="col-7 text-end">
+                    <h3 class="fw-bold mb-1 text-{{ $color }}">
+                        <span id="total-not-invoiced-amount">
+                            {{ $isProfit ? '+' : '-' }}{{ number_format($amount, 2) }} ৳
+                        </span>
+                    </h3>
+                    <p class="text-{{ $color }} mb-0 text-uppercase small fw-bold">{{ $label }}</p>
                 </div>
             </div>
         </div>
+    </div>
+</div>
 
     </div> <!-- end col-->
 
