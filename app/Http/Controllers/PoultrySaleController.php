@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\PoultryBatch;
 use App\Models\PoultrySale;
 use App\Models\PoultrySalesPayment;
@@ -199,5 +200,68 @@ class PoultrySaleController extends Controller
         $sale->save();
 
         return redirect()->back()->with('success', 'Payment deleted successfully.');
+    }
+
+
+
+    public function paymentHistory(Request $request)
+    {
+        $query = PoultrySalesPayment::with(['sale.batch.customer'])
+            ->orderBy('payment_date', 'desc');
+
+        // Filters
+        if ($request->filled('sale_id')) {
+            $query->where('sale_id', $request->sale_id);
+        }
+
+        if ($request->filled('batch_id')) {
+            $query->whereHas('sale', function ($q) use ($request) {
+                $q->where('batch_id', $request->batch_id);
+            });
+        }
+
+        if ($request->filled('customer_id')) {
+            $query->whereHas('sale.batch', function ($q) use ($request) {
+                $q->where('customer_id', $request->customer_id);
+            });
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('payment_date', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('payment_date', '<=', $request->end_date);
+        }
+
+        if ($request->filled('min_amount')) {
+            $query->where('amount', '>=', $request->min_amount);
+        }
+
+        if ($request->filled('max_amount')) {
+            $query->where('amount', '<=', $request->max_amount);
+        }
+
+        $payments = $query->get();
+
+        // Summary
+        $totalPayments = $payments->sum('amount');
+        $avgPayment = $payments->count() > 0 ? $payments->avg('amount') : 0;
+        $paymentCount = $payments->count();
+
+        // For Filter Dropdowns
+        $batches = PoultryBatch::orderBy('batch_name')->pluck('batch_name', 'id');
+        $customers = Customer::orderBy('name')->pluck('name', 'id');
+        $sales = PoultrySale::orderBy('sale_date', 'desc')->pluck('id', 'id');
+
+        return view('poultry-sales.payment_history', compact(
+            'payments',
+            'totalPayments',
+            'avgPayment',
+            'paymentCount',
+            'batches',
+            'customers',
+            'sales'
+        ));
     }
 }

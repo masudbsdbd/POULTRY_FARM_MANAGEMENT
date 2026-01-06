@@ -31,4 +31,10 @@ class PoultrySale extends Model
     {
         return $this->hasMany(PoultrySalesPayment::class, 'sale_id');
     }
+
+
+    public function batch()
+    {
+        return $this->belongsTo(PoultryBatch::class, 'batch_id');
+    }
 }

@@ -14733,7 +14733,23 @@ namespace App\Models {
     /**
      * App\Models\PoultryOthersIncome
      *
+     * @property \Illuminate\Support\Carbon|null $updated_at
+     * @property \Illuminate\Support\Carbon|null $created_at
+     * @property \Illuminate\Support\Carbon $income_date
+     * @property string|null $note
+     * @property float $amount
+     * @property string $title
+     * @property int $batch_id
+     * @property int $id
      * @property-read \App\Models\PoultryBatch $batch
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome whereId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome whereBatchId($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome whereTitle($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome whereAmount($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome whereNote($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome whereIncomeDate($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome whereCreatedAt($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome whereUpdatedAt($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome newModelQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome newQuery()
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryOthersIncome>|PoultryOthersIncome query()
@@ -15046,6 +15062,7 @@ namespace App\Models {
      * @property int $id
      * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PoultrySalesPayment> $payments
      * @property-read int|null $payments_count
+     * @property-read \App\Models\PoultryBatch $batch
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySale>|PoultrySale whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySale>|PoultrySale whereBatchId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultrySale>|PoultrySale whereSaleType($value)

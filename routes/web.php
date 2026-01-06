@@ -570,6 +570,11 @@ Route::middleware('authenticated')->group(function () {
     });
 
 
+    Route::prefix('poultry/sales/payments')->name('poultry.sales.payments.')->group(function () {
+        Route::get('/history', [PoultrySaleController::class, 'paymentHistory'])->name('history');
+    });
+
+
     Route::prefix('poultry/others-income')->name('poultry.others-income.')->group(function () {
         Route::get('/{batch_id}', [PoultryOthersIncomeController::class, 'index'])->name('index');
         Route::post('/', [PoultryOthersIncomeController::class, 'store'])->name('store');
