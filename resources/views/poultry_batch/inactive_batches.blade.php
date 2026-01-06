@@ -58,9 +58,9 @@
             <h5 class="mb-0"><i class="fe-filter me-2"></i> Filters</h5>
         </div>
         <div class="card-body">
-            <form method="GET" action="{{ route('poultrybatch.index') }}">
+            <form method="GET" action="{{ route('poultrybatch.inactive') }}">
                 <div class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col">
                         <label>Customer</label>
                         <select name="customer_id" class="form-select">
                             <option value="">All Customers</option>
@@ -71,7 +71,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col">
                         <label>Chicken Type</label>
                         <select name="chicken_type" class="form-select">
                             <option value="">All</option>
@@ -79,13 +79,21 @@
                             <option value="layer" {{ request('chicken_type') == 'layer' ? 'selected' : '' }}>Layer</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col">
                         <label>Start Date From</label>
                         <input type="date" name="start_date_from" class="form-control" value="{{ request('start_date_from') }}">
                     </div>
-                    <div class="col-md-2">
+                    <div class="col">
                         <label>Start Date To</label>
                         <input type="date" name="start_date_to" class="form-control" value="{{ request('start_date_to') }}">
+                    </div>
+                    <div class="col">
+                        <label>Close Date From</label>
+                        <input type="date" name="close_date_from" class="form-control" value="{{ request('close_date_from') }}">
+                    </div>
+                    <div class="col">
+                        <label>Close Date To</label>
+                        <input type="date" name="close_date_to" class="form-control" value="{{ request('close_date_to') }}">
                     </div>
                     <div class="col-md-3 col-lg-2 align-self-end">
                         <button type="submit" class="btn btn-primary w-100">
@@ -93,7 +101,7 @@
                         </button>
                     </div>
                     <div class="col-md-3 col-lg-1 align-self-end">
-                        <a href="{{ route('poultrybatch.index') }}" class="btn btn-secondary w-100">
+                        <a href="{{ route('poultrybatch.inactive') }}" class="btn btn-secondary w-100"> 
                             <i class="fe-refresh-cw"></i> Reset
                         </a>
                     </div>

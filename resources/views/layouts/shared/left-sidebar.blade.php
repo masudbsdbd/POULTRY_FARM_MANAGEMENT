@@ -66,7 +66,7 @@
                 </a>
             </li>
 
-            <li class="menu-item">
+            {{-- <li class="menu-item">
                 <a href="#manageEmployee" data-bs-toggle="collapse" class="menu-link">
                     <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
                     <span class="menu-text"> Quotations </span>
@@ -80,7 +80,7 @@
                         </li>
                     </ul>
                 </div>
-            </li>
+            </li> --}}
 
             <li class="menu-item">
                 <a href="#allReports" data-bs-toggle="collapse" class="menu-link">
@@ -101,7 +101,7 @@
             </li>
 
             @can('product-list')
-            <li class="menu-item">
+            {{-- <li class="menu-item">
                 <a href="#manageProducts" data-bs-toggle="collapse" class="menu-link">
                     <span class="menu-icon"><i class="mdi mdi-apps"></i></span>
                     <span class="menu-text"> Products </span>
@@ -139,7 +139,7 @@
 
                     </ul>
                 </div>
-            </li>
+            </li> --}}
             @endcan
 
 
@@ -155,6 +155,11 @@
                     <ul class="sub-menu">
                         <li class="menu-item">
                             <a class="menu-link" href="{{ route('poultrybatch.index') }}"><span class="menu-text">All Active Batches</span></a>
+                        </li>
+                    </ul>
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('poultrybatch.inactive') }}"><span class="menu-text">All Inactive Batches</span></a>
                         </li>
                     </ul>
                 </div>

@@ -524,7 +524,9 @@ Route::middleware('authenticated')->group(function () {
 
 
     // Customer Management
+    Route::get('/poultrybatch/inactive', [PoultryBatchController::class, 'inactiveBatches'])->name('poultrybatch.inactive');
     Route::resource('poultrybatch', PoultryBatchController::class);
+
 
 
     // Customer Management

@@ -23,14 +23,34 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-6">
+                                <div class="avatar-lg rounded-circle bg-soft-danger border-danger border">
+                                <i class="fe-dollar-sign font-22 avatar-title text-danger"></i>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="text-end">
+                                    <h3 class="text-dark mt-1"><span data-plugin="counterup">{{ $totalCustomers }}</span></h3>
+                                    <p class="text-muted mb-1 text-truncate">Total Customers</p>
+                                </div>
+                            </div>
+                        </div> <!-- end row-->
+                    </div>
+                </div> <!-- end widget-rounded-circle-->
+            </div> <!-- end col-->
+            
+            <div class="col-md-6 col-xl-4">
+                <div class="widget-rounded-circle card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
                                 <div class="avatar-lg rounded-circle bg-soft-primary border-primary border">
                                     <i class="fe-shopping-cart font-22 avatar-title text-primary"></i>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="text-end">
-                                    <h3 class="text-dark mt-1"><span data-plugin="counterup">{{ $totalQuotation }}</span></h3>
-                                    <p class="text-muted mb-1 text-truncate">Total Quotations</p>
+                                    <h3 class="text-dark mt-1"><span data-plugin="counterup">{{ $totalActivebatch }}</span></h3>
+                                    <p class="text-muted mb-1 text-truncate">Total Active Batches</p>
                                 </div>
                             </div>
                         </div> <!-- end row-->
@@ -49,88 +69,8 @@
                             </div>
                             <div class="col-6">
                                 <div class="text-end">
-                                    <h3 class="text-dark mt-1">&#2547; <span data-plugin="counterup">{{ showAmount($totalPayments) }}</span></h3>
-                                    <p class="text-muted mb-1 text-truncate">Total Payments Received</p>
-                                </div>
-                            </div>
-                        </div> <!-- end row-->
-                    </div>
-                </div> <!-- end widget-rounded-circle-->
-            </div> <!-- end col-->
-
-
-            <div class="col-md-6 col-xl-4">
-                <div class="widget-rounded-circle card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="avatar-lg rounded-circle bg-soft-danger border-danger border">
-                                <i class="fe-dollar-sign font-22 avatar-title text-danger"></i>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-end">
-                                    <h3 class="text-dark mt-1">&#2547; <span data-plugin="counterup">{{ showAmount($totalDueAmount) }}</span></h3>
-                                    <p class="text-muted mb-1 text-truncate">Total Due Amount</p>
-                                </div>
-                            </div>
-                        </div> <!-- end row-->
-                    </div>
-                </div> <!-- end widget-rounded-circle-->
-            </div> <!-- end col-->
-            
-
-            <div class="col-md-6 col-xl-4">
-                <div class="widget-rounded-circle card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="avatar-lg rounded-circle bg-soft-danger border-danger border">
-                                    <i class="fe-credit-card font-22 avatar-title text-danger"></i>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-end">
-                                     <h3 class="text-dark mt-1"> <span data-plugin="counterup">{{ $totalUnpaidInvoices }}</span></h3>
-                                    <p class="text-muted mb-1 text-truncate">Total Unpaid Invoices</p>
-                                </div>
-                            </div>
-                        </div> <!-- end row-->
-                    </div>
-                </div> <!-- end widget-rounded-circle-->
-            </div> <!-- end col-->
-            <div class="col-md-6 col-xl-4">
-                <div class="widget-rounded-circle card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="avatar-lg rounded-circle bg-soft-warning border-warning border">
-                                    <i class="fe-dollar-sign font-22 avatar-title text-warning"></i>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-end">
-                                    <h3 class="text-dark mt-1"><span data-plugin="counterup">{{ $totalPartialPaidInvoices }}</span></h3>
-                                    <p class="text-muted mb-1 text-truncate">Partial Paid Invoices</p>
-                                </div>
-                            </div>
-                        </div> <!-- end row-->
-                    </div>
-                </div> <!-- end widget-rounded-circle-->
-            </div> <!-- end col-->
-            <div class="col-md-6 col-xl-4">
-                <div class="widget-rounded-circle card">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-6">
-                                <div class="avatar-lg rounded-circle bg-soft-primary border-primary border">
-                                    <i class="fe-users font-22 avatar-title text-primary"></i>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-end">
-                                    <h3 class="text-dark mt-1"><span data-plugin="counterup">{{ $totalCustomers }}</span></h3>
-                                    <p class="text-muted mb-1 text-truncate">Total Customers</p>
+                                    <h3 class="text-dark mt-1"> <span data-plugin="counterup">{{ $totalInActivebatch }}</span></h3>
+                                    <p class="text-muted mb-1 text-truncate">Total Inactive Batches</p>
                                 </div>
                             </div>
                         </div> <!-- end row-->
@@ -143,7 +83,7 @@
         {{-- <div id="income-chart" style="margin-top: 100px;"></div> --}}
 
 
-        <div class="row">
+        <div class="row d-none">
             <div class="col-xxl-8">
                 <div class="card h-100 radius-8 border-0">
                     <div class="card-body p-24">
@@ -170,7 +110,6 @@
 
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>

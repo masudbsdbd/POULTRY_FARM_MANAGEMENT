@@ -12,11 +12,145 @@ class PoultryBatchController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    // public function index()
+    // {
+    //     $pageTitle = 'Active Batches';
+    //     $batches = PoultryBatch::with('customer')->active()->orderBy('batch_start_date', 'desc')->paginate(gs()->pagination);
+    //     return view('poultry_batch.index', compact('pageTitle', 'batches'));
+    // }
+
+    public function index(Request $request)
     {
-        $pageTitle = 'Poultry Batches';
-        $batches = PoultryBatch::with('customer')->orderBy('batch_start_date', 'desc')->get();
-        return view('poultry_batch.index', compact('pageTitle', 'batches'));
+        $pageTitle = 'Active Batches';
+
+        $query = PoultryBatch::with('customer')->orderBy('batch_start_date', 'desc');
+
+        // Filters
+        if ($request->filled('customer_id')) {
+            $query->where('customer_id', $request->customer_id);
+        }
+
+        if ($request->filled('chicken_type')) {
+            $query->where('chicken_type', $request->chicken_type);
+        }
+
+        if ($request->filled('start_date_from')) {
+            $query->whereDate('batch_start_date', '>=', $request->start_date_from);
+        }
+
+        if ($request->filled('start_date_to')) {
+            $query->whereDate('batch_start_date', '<=', $request->start_date_to);
+        }
+
+        if ($request->filled('close_date_from')) {
+            $query->whereDate('batch_close_date', '>=', $request->close_date_from);
+        }
+
+        if ($request->filled('close_date_to')) {
+            $query->whereDate('batch_close_date', '<=', $request->close_date_to);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        } else {
+            $query->active(); // Default: only active
+        }
+
+        $batches = $query->get();
+
+        // Summary Data
+        $totalBatches = $batches->count();
+        $totalChickens = $batches->sum('total_chickens');
+        $totalPurchaseCost = $batches->sum(function ($batch) {
+            return $batch->total_chickens * $batch->price_per_chicken;
+        });
+        $broilerCount = $batches->where('chicken_type', 'broiler')->count();
+        $layerCount = $batches->where('chicken_type', 'layer')->count();
+
+        // For Filter Dropdown
+        $customers = Customer::orderBy('name')->pluck('name', 'id');
+
+        return view('poultry_batch.index', compact(
+            'pageTitle',
+            'batches',
+            'customers',
+            'totalBatches',
+            'totalChickens',
+            'totalPurchaseCost',
+            'broilerCount',
+            'layerCount'
+        ));
+    }
+
+    public function inactiveBatches(Request $request)
+    {
+        $pageTitle = 'Inactive Batches';
+
+        $query = PoultryBatch::with('customer')->orderBy('batch_start_date', 'desc');
+
+        // Filters
+        if ($request->filled('customer_id')) {
+            $query->where('customer_id', $request->customer_id);
+        }
+
+        if ($request->filled('chicken_type')) {
+            $query->where('chicken_type', $request->chicken_type);
+        }
+
+        if ($request->filled('start_date_from')) {
+            $query->whereDate('batch_start_date', '>=', $request->start_date_from);
+        }
+
+        if ($request->filled('start_date_to')) {
+            $query->whereDate('batch_start_date', '<=', $request->start_date_to);
+        }
+
+        if ($request->filled('close_date_from')) {
+            $query->whereDate('batch_close_date', '>=', $request->close_date_from);
+        }
+
+        if ($request->filled('close_date_to')) {
+            $query->whereDate('batch_close_date', '<=', $request->close_date_to);
+        }
+
+        if ($request->filled('close_date_from')) {
+            $query->whereDate('batch_close_date', '>=', $request->close_date_from);
+        }
+
+        if ($request->filled('close_date_to')) {
+            $query->whereDate('batch_close_date', '<=', $request->close_date_to);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        } else {
+            $query->inactive();
+        }
+
+        $batches = $query->get();
+
+        // Summary Data
+        $totalBatches = $batches->count();
+        $totalChickens = $batches->sum('total_chickens');
+        $totalPurchaseCost = $batches->sum(function ($batch) {
+            return $batch->total_chickens * $batch->price_per_chicken;
+        });
+        $broilerCount = $batches->where('chicken_type', 'broiler')->count();
+        $layerCount = $batches->where('chicken_type', 'layer')->count();
+
+        // For Filter Dropdown
+        $customers = Customer::orderBy('name')->pluck('name', 'id');
+
+        return view('poultry_batch.inactive_batches', compact(
+            'pageTitle',
+            'batches',
+            'customers',
+            'totalBatches',
+            'totalChickens',
+            'totalPurchaseCost',
+            'broilerCount',
+            'layerCount'
+        ));
     }
 
     /**

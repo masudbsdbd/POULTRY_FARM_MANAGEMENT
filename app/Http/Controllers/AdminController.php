@@ -9,6 +9,7 @@ use App\Models\PaymentRecord;
 use App\Models\Quotation;
 use App\Models\Invoice;
 use App\Models\Customer;
+use App\Models\PoultryBatch;
 
 class AdminController extends Controller
 {
@@ -20,7 +21,6 @@ class AdminController extends Controller
         $totalDueAmount = Invoice::sum('due_amount');
         $totalUnpaidInvoices = Invoice::where('status', 'unpaid')->count();
         $totalPartialPaidInvoices = Invoice::where('status', 'partially_paid')->count();
-        $totalCustomers = Customer::count();
 
 
         $monthlyStatistics = $this->getMonthlyStatistics();
@@ -33,7 +33,13 @@ class AdminController extends Controller
         $totalUnpaid = Invoice::sum('due_amount');
 
 
-        return view('dashboard', compact('totalQuotation', 'totalPayments', 'totalDueAmount', 'totalUnpaidInvoices', 'totalPartialPaidInvoices', 'months', 'amounts', 'totalPaid', 'totalUnpaid', 'totalCustomers'));
+        $totalActivebatch = PoultryBatch::active()->count();
+        $totalInActivebatch = PoultryBatch::inactive()->count();
+        $totalCustomers = Customer::count();
+        // dd($totalActivebatch);
+
+
+        return view('dashboard', compact('totalCustomers', 'totalActivebatch', 'totalInActivebatch', 'totalQuotation', 'totalPayments', 'totalDueAmount', 'totalUnpaidInvoices', 'totalPartialPaidInvoices', 'months', 'amounts', 'totalPaid', 'totalUnpaid'));
     }
 
 
