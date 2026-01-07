@@ -7,6 +7,8 @@
     @yield('css')
     @include('layouts.shared/head-css', ['mode' => $mode ?? '', 'demo' => $demo ?? ''])
     @vite(['resources/scss/icons.scss', 'resources/js/head.js', 'resources/css/custom.css'])
+    
+
 
 
     <!-- =================== use athother some script for datatables Start ==================== -->
@@ -32,10 +34,21 @@
 
     <!-- =================== use athother some script for datatables End ==================== -->
 
+    {{-- <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600&display=swap" rel="stylesheet"> --}}
+    {{-- <style>
+        .VIpgJd-ZVi9od-ORHb-OEVmcd skiptranslate {
+            display: none !important;
+        }
+
+        body {
+            top: 0 !important;
+            font-weight:bold;
+        }
+    </style> --}}
 
 </head>
 
-<body>
+<body style="" id="google_translate_element">
     <!-- Begin page -->
     <div id="wrapper">
 
@@ -65,6 +78,32 @@
 
     </div>
     <!-- END wrapper -->
+
+    {{-- <script>
+document.cookie = "googtrans=/en/bn; path=/";
+</script>
+
+
+<script type="text/javascript">
+function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'bn, en',
+        autoDisplay: false
+    }, 'google_translate_element');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(() => {
+        const el = document.querySelector('.VIpgJd-ZVi9od-ORHb-OEVmcd.skiptranslate');
+        if (el) {
+            el.style.display = 'none';
+        }
+    }, 1000);
+});
+</script> --}}
+
+{{-- <script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script> --}}
 
     @include('layouts.shared/footer-script')
     @include('includes.notify')

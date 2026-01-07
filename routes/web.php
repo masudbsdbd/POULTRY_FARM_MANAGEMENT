@@ -537,14 +537,14 @@ Route::middleware('authenticated')->group(function () {
     });
 
 
-    // Customer Management
+    // Poultry Death Management
     Route::controller('PoultryDeathController')->name('death.')->prefix('death')->group(function () {
         Route::get('list/{batch_id}', 'deathList')->name('list');
         Route::post('store/{id?}', 'store')->name('store');
         Route::post('delete/{id}', 'delete')->name('delete');
     });
 
-    // Customer Management
+    // Poultry Expense Management
     Route::controller('PoultryExpenseController')->name('poultry.expense.')->prefix('poultry/expense')->group(function () {
         Route::get('/{batch_id}', 'index')->name('index');
         Route::post('/', 'store')->name('store');

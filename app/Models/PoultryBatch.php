@@ -30,6 +30,21 @@ class PoultryBatch extends Model
     ];
 
 
+    public function sales()
+    {
+        return $this->hasMany(PoultrySale::class, 'batch_id');
+    }
+
+    public function expenses()
+    {
+        return $this->hasMany(PoultryExpense::class, 'batch_id');
+    }
+
+    public function othersIncome()
+    {
+        return $this->hasMany(PoultryOthersIncome::class, 'batch_id');
+    }
+
 
     public function customer()
     {

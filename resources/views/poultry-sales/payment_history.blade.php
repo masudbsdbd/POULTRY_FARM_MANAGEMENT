@@ -8,7 +8,7 @@
     <!-- Summary Cards -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-primary text-white shadow-sm">
+            <div class="card bg-primary text-white shadow-sm rounded-4">
                 <div class="card-body text-center">
                     <i class="fe-dollar-sign fs-1 mb-2"></i>
                     <h4 class="mb-0">{{ number_format($totalPayments, 2) }} ৳</h4>
@@ -17,7 +17,7 @@
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-success text-white shadow-sm">
+            <div class="card bg-success text-white shadow-sm rounded-4">
                 <div class="card-body text-center">
                     <i class="fe-check-circle fs-1 mb-2"></i>
                     <h4 class="mb-0">{{ $paymentCount }}</h4>
@@ -26,7 +26,7 @@
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-info text-white shadow-sm">
+            <div class="card bg-info text-white shadow-sm rounded-4">
                 <div class="card-body text-center">
                     <i class="fe-bar-chart-2 fs-1 mb-2"></i>
                     <h4 class="mb-0">{{ number_format($avgPayment, 2) }} ৳</h4>
@@ -35,7 +35,7 @@
             </div>
         </div>
         <div class="col-xl-3 col-md-6">
-            <div class="card bg-warning text-white shadow-sm">
+            <div class="card bg-warning text-white shadow-sm rounded-4">
                 <div class="card-body text-center">
                     <i class="fe-calendar fs-1 mb-2"></i>
                     <h4 class="mb-0">{{ $payments->count() > 0 ? $payments->first()->payment_date->format('d M Y') : '-' }}</h4>

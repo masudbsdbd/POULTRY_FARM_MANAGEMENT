@@ -83,14 +83,14 @@
         {{-- <div id="income-chart" style="margin-top: 100px;"></div> --}}
 
 
-        <div class="row d-none">
-            <div class="col-xxl-8">
+        <div class="row ">
+            <div class="col-xxl-8 d-none">
                 <div class="card h-100 radius-8 border-0">
                     <div class="card-body p-24">
                         <div class="d-flex align-items-center flex-wrap gap-2 justify-content-between mb-20">
                             <div>
                                 <h6 class="mb-2 fw-bold text-lg text-neutral-600">Payment Chart <span id="revenueYear"><?php echo date('Y'); ?></span></h6>
-                                {{-- <span class="text-sm fw-medium text-secondary-light">Monthly Income Chart</span> --}}
+                                <span class="text-sm fw-medium text-secondary-light">Monthly Income Chart</span>
                             </div>
                         </div>
 
@@ -110,6 +110,7 @@
 
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -122,10 +123,34 @@
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
     <script>
-
-        const months = @json($months);
-        const amounts = @json($amounts);
-
+        const months = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec"
+        ];
+        const amounts = [
+            0,
+            0,
+            1000,
+            2000,
+            3000,
+            4000,
+            5000,
+            6000,
+            7000,
+            8000,
+            9000,
+            10000
+        ];
         console.log(months);
         console.log(amounts);
         var options = {
@@ -179,8 +204,8 @@
 
 
         // paid vs unpaid
-        const totalPaid = @json($totalPaid);
-        const totalUnpaid = @json($totalUnpaid);
+        const totalPaid = @json($toalPaidAmount);
+        const totalUnpaid = @json($totalDueAmount);
         var options = {
         series: [parseInt(totalPaid), parseInt(totalUnpaid)],
         chart: {

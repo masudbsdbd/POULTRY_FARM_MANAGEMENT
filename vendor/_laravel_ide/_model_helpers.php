@@ -13779,6 +13779,12 @@ namespace App\Models {
      * @property string $batch_name
      * @property int $customer_id
      * @property int $id
+     * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PoultrySale> $sales
+     * @property-read int|null $sales_count
+     * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PoultryExpense> $expenses
+     * @property-read int|null $expenses_count
+     * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\PoultryOthersIncome> $othersIncome
+     * @property-read int|null $othersIncome_count
      * @property-read \App\Models\Customer $customer
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryBatch>|PoultryBatch whereId($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryBatch>|PoultryBatch whereCustomerId($value)

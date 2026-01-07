@@ -102,16 +102,16 @@
                                     {{-- Chicken Grade --}}
                                     <div class="col-md-4" style="margin-top: 35px;">
                                         <label>
-                                            <input type="radio" name="chicken_grade" checked value="A"> A
+                                            <input type="radio" name="chicken_grade" {{ $batch->chicken_grade == 'A' ? 'checked' : '' }} value="A"> A
                                         </label>
                                         <label>
-                                            <input type="radio" name="chicken_grade" value="B"> B
+                                            <input type="radio" name="chicken_grade" {{ $batch->chicken_grade == 'B' ? 'checked' : '' }} value="B"> B
                                         </label>
                                         <label>
-                                            <input type="radio" name="chicken_grade" value="C"> C
+                                            <input type="radio" name="chicken_grade" {{ $batch->chicken_grade == 'C' ? 'checked' : '' }} value="C"> C
                                         </label>
                                         <label>
-                                            <input type="radio" name="chicken_grade" value="D"> D
+                                            <input type="radio" name="chicken_grade" {{ $batch->chicken_grade == 'D' ? 'checked' : '' }} value="D"> D
                                         </label>
                                     </div>
 
@@ -146,11 +146,18 @@
                                         </select>
                                     </div>
 
+                                    {{-- @dd($batch->batch_start_date) --}}
+
                                     {{-- Batch Start Date --}}
                                     <div class="mb-3 col-md-4">
                                         <label for="batch_start_date" class="form-label">Batch Start Date</label>
-                                        <input type="date" class="form-control" name="batch_start_date" required
-                                            value="{{ old('batch_start_date', $batch->batch_start_date ?? '') }}">
+                                        <input
+                                            type="date"
+                                            class="form-control"
+                                            name="batch_start_date"
+                                            required
+                                            value="{{ old('batch_start_date', optional($batch->batch_start_date ?? null)->format('Y-m-d')) }}"
+                                        >
                                     </div>
 
                                     {{-- Batch Close Date --}}

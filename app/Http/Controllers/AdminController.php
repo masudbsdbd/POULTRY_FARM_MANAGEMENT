@@ -10,36 +10,24 @@ use App\Models\Quotation;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Models\PoultryBatch;
+use App\Models\PoultrySale;
 
 class AdminController extends Controller
 {
 
     public function dashboard()
     {
-        $totalQuotation = Quotation::count();
-        $totalPayments = PaymentRecord::sum('amount');
-        $totalDueAmount = Invoice::sum('due_amount');
-        $totalUnpaidInvoices = Invoice::where('status', 'unpaid')->count();
-        $totalPartialPaidInvoices = Invoice::where('status', 'partially_paid')->count();
-
-
-        $monthlyStatistics = $this->getMonthlyStatistics();
-        $months = $monthlyStatistics['months'];
-        $amounts = $monthlyStatistics['amounts'];
-
-
-        // total paid & total unpaid amount
-        $totalPaid = Invoice::sum('paid_amount');
-        $totalUnpaid = Invoice::sum('due_amount');
-
-
         $totalActivebatch = PoultryBatch::active()->count();
         $totalInActivebatch = PoultryBatch::inactive()->count();
         $totalCustomers = Customer::count();
         // dd($totalActivebatch);
 
+        $totalSalesAmount = PoultrySale::sum('total_amount');
+        $toalPaidAmount = PoultrySale::sum('paid_amount');
+        $totalDueAmount = $totalSalesAmount - $toalPaidAmount;
 
-        return view('dashboard', compact('totalCustomers', 'totalActivebatch', 'totalInActivebatch', 'totalQuotation', 'totalPayments', 'totalDueAmount', 'totalUnpaidInvoices', 'totalPartialPaidInvoices', 'months', 'amounts', 'totalPaid', 'totalUnpaid'));
+
+        return view('dashboard', compact('totalCustomers', 'totalActivebatch', 'totalInActivebatch', 'totalDueAmount', 'toalPaidAmount'));
     }
 
 

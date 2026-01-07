@@ -70,8 +70,15 @@ class CustomerController extends Controller
     {
         $customerInfo = Customer::find($customer_id);
         $pageTitle = $customerInfo->name . "'s batches";
-        $batches = PoultryBatch::where('customer_id', $customer_id)->orderBy('batch_start_date', 'desc')->get();
-        return view('customer.poltry_batches', compact('pageTitle', 'batches', 'customerInfo'));
+        $batches = PoultryBatch::with('sales')->where('customer_id', $customer_id)->orderBy('batch_start_date', 'desc')->get();
+
+        // Summary for 3 Cards
+        $totalBatches = $batches->count();
+        $activeBatches = $batches->where('status', 'active')->count();
+        $inactiveBatches = $batches->where('status', 'inactive')->count();
+
+        // dd($batches);
+        return view('customer.poltry_batches', compact('pageTitle', 'batches', 'customerInfo', 'totalBatches', 'activeBatches', 'inactiveBatches'));
     }
 
     public function createBatch($customer_id)
@@ -410,13 +417,13 @@ class CustomerController extends Controller
 
     public function store(Request $request, $id = 0)
     {
-        // dd($request->all());    
+        // dd($request->all());
         $request->validate([
             'name'        => 'required|string|max:255',
             'type'        => 'nullable|string|max:255',
-            'trn_number'  => 'nullable|string|max:255',
-            'trn_date'    => 'nullable|string|max:255',
-            'company'     => 'nullable|string|max:255',
+            // 'trn_number'  => 'nullable|string|max:255',
+            // 'trn_date'    => 'nullable|string|max:255',
+            // 'company'     => 'nullable|string|max:255',
             'address'     => 'nullable|string|max:500',
             'email' => [
                 'nullable',
@@ -446,9 +453,9 @@ class CustomerController extends Controller
 
         $customer->name = $request->name;
         $customer->type = $request->type;
-        $customer->trn_number = $request->trn_number;
-        $customer->trn_date = $request->trn_date;
-        $customer->company = $request->company;
+        // $customer->trn_number = $request->trn_number;
+        // $customer->trn_date = $request->trn_date;
+        // $customer->company = $request->company;
         $customer->mobile = $request->mobile;
         $customer->email = $request->email;
         $customer->address = $request->address;

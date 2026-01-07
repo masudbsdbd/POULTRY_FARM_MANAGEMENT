@@ -220,7 +220,10 @@ class PoultryBatchController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        $pageTitle = 'Edit Batch';
+        $customers = Customer::get();
+        $batch = PoultryBatch::find($id);
+        return view('poultry_batch.create', compact('pageTitle', 'customers', 'batch'));
     }
 
     /**
@@ -228,7 +231,41 @@ class PoultryBatchController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        // Validation
+        $validated = $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'batch_name' => 'required|string|max:255',
+            'batch_number' => 'nullable|string|max:255',
+            'chicken_type' => 'required|string|max:255',
+            'total_chickens' => 'required|integer|min:1',
+            'price_per_chicken' => 'required|numeric|min:0',
+            'chicken_grade' => 'nullable|in:A,B,C,D',
+            'hatchery_name' => 'required|string|max:255',
+            'shed_number' => 'nullable|string|max:255',
+            'target_feed_qty' => 'nullable|numeric|min:0',
+            'terget_feed_unit' => 'nullable|in:bag,kg',
+            'batch_start_date' => 'required|date',
+            'batch_description' => 'nullable|string',
+        ]);
+
+        // update batch
+        $batch = PoultryBatch::find($id);
+        $batch->customer_id = $validated['customer_id'];
+        $batch->batch_name = $validated['batch_name'];
+        $batch->batch_number = $validated['batch_number'] ?? null;
+        $batch->chicken_type = $validated['chicken_type'];
+        $batch->total_chickens = $validated['total_chickens'];
+        $batch->price_per_chicken = $validated['price_per_chicken'];
+        $batch->chicken_grade = $validated['chicken_grade'] ?? null;
+        $batch->hatchery_name = $validated['hatchery_name'];
+        $batch->shed_number = $validated['shed_number'] ?? null;
+        $batch->target_feed_qty = $validated['target_feed_qty'] ?? null;
+        $batch->terget_feed_unit = $validated['terget_feed_unit'] ?? null;
+        $batch->batch_start_date = $validated['batch_start_date'];
+        $batch->batch_description = $validated['batch_description'] ?? null;
+        $batch->save();
+
+        return redirect()->route('poultrybatch.index')->with('success', 'Batch has been updated successfully');
     }
 
     /**
