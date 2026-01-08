@@ -474,4 +474,27 @@ class CustomerController extends Controller
         $notify[] = ['success', 'Customer has been successfully deleted'];
         return back()->withNotify($notify);
     }
+
+
+    public function closeBatch($id)
+    {
+        $customer = PoultryBatch::find($id);
+        $customer->status = 'inactive';
+        $customer->batch_close_date = now();
+        $customer->save();
+
+        $notify[] = ['success', 'Batch has been successfully closed'];
+        return back()->withNotify($notify);
+    }
+
+    public function openBatch($id)
+    {
+        $customer = PoultryBatch::find($id);
+        $customer->status = 'active';
+        $customer->batch_close_date = null;
+        $customer->save();
+
+        $notify[] = ['success', 'Batch has been successfully opened'];
+        return back()->withNotify($notify);
+    }
 }

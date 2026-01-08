@@ -535,6 +535,8 @@ Route::middleware('authenticated')->group(function () {
         Route::get('batches/{customer_id}', 'batches')->name('batches');
         Route::get('batches/create/{customer_id}', 'createBatch')->name('createBatch');
         Route::get('batches/manage/{batch_id}', 'manageBatch')->name('manageBatch');
+        Route::get('batches/close/{batch_id}', 'closeBatch')->name('closeBatch');
+        Route::get('batches/open/{batch_id}', 'openBatch')->name('openBatch');
     });
 
 

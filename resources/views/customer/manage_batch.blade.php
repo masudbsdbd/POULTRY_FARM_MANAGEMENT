@@ -30,8 +30,17 @@
          <div class="col-md-6 col-xl-4">
             <a href="{{ route('customer.index') }}" class="btn btn-info"><i class="mdi mdi-arrow-left"></i>back</a>
         </div>
-        <div class="col-md-6 col-xl-4"></div><div class="col-md-6 col-xl-4"></div>
-
+        <div class="col-md-6 col-xl-4"></div>
+        @if ($batchInfo->status == 'active')
+            <div class="col-md-6 col-xl-4 text-end">
+                <a href="{{ route('customer.closeBatch', $batchInfo->id) }}" class="btn btn-danger"><i class="mdi mdi-close"></i>Close the Batch</a>
+            </div>
+        @else
+            <div class="col-md-6 col-xl-4 text-end">
+                <a href="{{ route('customer.openBatch', $batchInfo->id) }}" class="btn btn-success"><i class="mdi mdi-check"></i>Open the Batch</a>
+            </div>
+        @endif
+        
         <div class="col-md-6 col-xl-3">
             <div class="card shadow-sm border-0 rounded-4  widget-rounded-circle">
                 <div class="card-body py-4">
