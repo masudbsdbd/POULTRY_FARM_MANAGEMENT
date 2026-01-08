@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PoultryBatch;
 use App\Models\PoultryExpense;
+use App\Models\PoultryExpensePayment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -19,20 +20,13 @@ class PoultryExpenseController extends Controller
 
         // Summary Calculations
         $totalExpenses = $expenses->sum('total_amount');
-
-        $cashExpenses = $expenses->where('transaction_type', 'cash')->sum('total_amount');
-        $dueExpenses = $expenses->where('transaction_type', 'due')->sum('total_amount');
-
-        $totalPaidFromDue = $expenses->where('transaction_type', 'due')->sum('paid_amount');
-        $totalDueRemaining = $dueExpenses - $totalPaidFromDue;
-
-        $fullyPaidCount = $expenses->where('transaction_type', 'due')->where('payment_status', 'paid')->count();
-        $partiallyPaidCount = $expenses->where('transaction_type', 'due')->where('payment_status', 'partial')->count();
+        $totalDueExpenses = $expenses->whereIn('payment_status', ['due', 'partial'])->sum('total_amount');
+        $totalPaidExpenses = $expenses->where('payment_status', 'paid')->sum('total_amount');
 
         $totalTransactions = $expenses->count();
         $latestExpenseDate = $expenses->max('expense_date');
 
-        return view('poultry-expenses.index', compact('bathInfo', 'expenses', 'invNumber', 'totalExpenses', 'totalTransactions', 'latestExpenseDate', 'cashExpenses', 'dueExpenses', 'totalPaidFromDue', 'totalDueRemaining', 'fullyPaidCount', 'partiallyPaidCount'));
+        return view('poultry-expenses.index', compact('bathInfo', 'expenses', 'invNumber', 'totalExpenses', 'totalTransactions', 'latestExpenseDate', 'totalDueExpenses', 'totalPaidExpenses'));
     }
 
     public function store(Request $request)
@@ -46,9 +40,55 @@ class PoultryExpenseController extends Controller
             'unit'             => 'required|in:bag,piece,kg,litre,gram,bottle,pack,other',
             'price'            => 'required|numeric|min:0',
             'total_amount'     => 'required|numeric|min:0',
+            'description'      => 'nullable|string',
+            'batch_id'         => 'required|exists:poultry_batches,id',
         ]);
 
-        PoultryExpense::create($request->all());
+        // Auto calculate total_amount (safety)
+        $total_amount = $request->quantity * $request->price;
+
+        // Default values
+        $paid_amount = 0;
+        $payment_status = 'due';
+
+        if ($request->transaction_type === 'cash') {
+            $paid_amount = $total_amount;
+            $payment_status = 'paid';
+        }
+        // যদি due হয় → paid_amount = 0, payment_status = 'due'
+
+        // dd($payment_status);
+
+        $expense = PoultryExpense::create([
+            'batch_id'          => $request->batch_id,
+            'expense_date'      => $request->expense_date,
+            'expense_title'     => $request->expense_title,
+            'invoice_number'    => $request->invoice_number,
+            'category'          => $request->category,
+            'feed_name'         => $request->feed_name,
+            'feed_type'         => $request->feed_type,
+            'medicine_name'     => $request->medicine_name,
+            'transaction_type'  => $request->transaction_type,
+            'quantity'          => $request->quantity,
+            'unit'              => $request->unit,
+            'price'             => $request->price,
+            'total_amount'      => $total_amount,
+            'paid_amount'       => $paid_amount,
+            'payment_status'    => $payment_status,
+            'description'       => $request->description,
+        ]);
+
+        // শুধু যদি cash হয় এবং তুমি চাও cash payment-ও history-তে দেখাতে
+        // তাহলে এটা যোগ করতে পারো (অপশনাল)
+        if ($request->transaction_type === 'cash') {
+            PoultryExpensePayment::create([
+                'expense_id'   => $expense->id,
+                'payment_date' => $request->expense_date, // একই তারিখে ধরে
+                'amount'       => $total_amount,
+                'note'         => 'Cash payment at expense creation',
+            ]);
+        }
+        // যদি না চাও — কিছু করো না (যা বর্তমানে ঠিক আছে)
 
         return redirect()->back()->with('success', 'Expense created successfully.');
     }

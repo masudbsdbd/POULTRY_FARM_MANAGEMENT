@@ -202,7 +202,10 @@
                 <div class="collapse" id="allReports">
                     <ul class="sub-menu">
                         <li class="menu-item">
-                            <a class="menu-link" href="{{ route('poultry.sales.payments.history') }}"><span class="menu-text">Payment Report</span></a>
+                            <a class="menu-link" href="{{ route('poultry.sales.payments.history') }}"><span class="menu-text">Sales Transaction History</span></a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('poultry.expense.payment.history') }}"><span class="menu-text">Expense Transaction History</span></a>
                         </li>
                         <li class="menu-item">
                             <a class="menu-link" href="{{ route('poultry.sale.reports.all-sales') }}"><span class="menu-text">Sales History</span></a>

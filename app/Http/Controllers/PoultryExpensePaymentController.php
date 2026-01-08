@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
+use App\Models\PoultryBatch;
 use App\Models\PoultryExpense;
 use App\Models\PoultryExpensePayment;
 use Illuminate\Http\Request;
@@ -74,5 +76,79 @@ class PoultryExpensePaymentController extends Controller
         $expense->save();
 
         return back()->with('success', 'Payment deleted.');
+    }
+
+
+    public function expensePaymentsHistory(Request $request)
+    {
+        $pageTitle = 'Expense Payment History';
+
+        $query = PoultryExpensePayment::with(['expense.batch.customer']);
+
+        // Filters
+        if ($request->filled('expense_id')) {
+            $query->where('expense_id', $request->expense_id);
+        }
+
+        if ($request->filled('batch_id')) {
+            $query->whereHas('expense', fn($q) => $q->where('batch_id', $request->batch_id));
+        }
+
+        if ($request->filled('customer_id')) {
+            $query->whereHas('expense.batch', fn($q) => $q->where('customer_id', $request->customer_id));
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('payment_date', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('payment_date', '<=', $request->end_date);
+        }
+
+        // if ($request->filled('min_amount')) {
+        //     $query->where('amount', '>=', $request->min_amount);
+        // }
+
+        // if ($request->filled('max_amount')) {
+        //     $query->where('amount', '<=', $request->max_amount);
+        // }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('expense', fn($e) => $e->where('expense_title', 'like', "%{$search}%"))
+                    ->orWhereHas('expense.batch', fn($b) => $b->where('batch_name', 'like', "%{$search}%"))
+                    ->orWhereHas('expense.batch.customer', fn($c) => $c->where('name', 'like', "%{$search}%"));
+            });
+        }
+
+        // All Filtered for Summary
+        $allPayments = (clone $query)->get();
+
+        $totalPayments = $allPayments->sum('amount');
+        $paymentCount = $allPayments->count();
+        $avgPayment = $paymentCount > 0 ? $allPayments->avg('amount') : 0;
+        $latestPaymentDate = $allPayments->max('payment_date');
+
+        // Paginated for Table
+        $payments = $query->orderBy('payment_date', 'desc')->paginate(10);
+
+        // Filters Dropdown
+        $batches = PoultryBatch::orderBy('batch_name')->pluck('batch_name', 'id');
+        $customers = Customer::orderBy('name')->pluck('name', 'id');
+        $expenses = PoultryExpense::orderBy('expense_date', 'desc')->get()->pluck('expense_title', 'id');
+
+        return view('poultry-expenses.expense-history', compact(
+            'pageTitle',
+            'payments',
+            'totalPayments',
+            'paymentCount',
+            'avgPayment',
+            'latestPaymentDate',
+            'batches',
+            'customers',
+            'expenses'
+        ));
     }
 }

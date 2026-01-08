@@ -14414,6 +14414,7 @@ namespace App\Models {
      * @property \Illuminate\Support\Carbon|null $created_at
      * @property date:Y-m-d $expense_date
      * @property string|null $description
+     * @property mixed $payment_status
      * @property float $paid_amount
      * @property float $total_amount
      * @property float $price
@@ -14445,6 +14446,7 @@ namespace App\Models {
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryExpense>|PoultryExpense wherePrice($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryExpense>|PoultryExpense whereTotalAmount($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryExpense>|PoultryExpense wherePaidAmount($value)
+     * @method static \Illuminate\Database\Eloquent\Builder<PoultryExpense>|PoultryExpense wherePaymentStatus($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryExpense>|PoultryExpense whereDescription($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryExpense>|PoultryExpense whereExpenseDate($value)
      * @method static \Illuminate\Database\Eloquent\Builder<PoultryExpense>|PoultryExpense whereCreatedAt($value)

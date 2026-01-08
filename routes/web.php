@@ -586,6 +586,7 @@ Route::middleware('authenticated')->group(function () {
 
 
     Route::prefix('poultry/expense-payment')->name('poultry.expense.payment.')->group(function () {
+        Route::get('/history', [PoultryExpensePaymentController::class, 'expensePaymentsHistory'])->name('history');
         Route::get('/{expense_id}', [PoultryExpensePaymentController::class, 'index'])->name('index');
         Route::post('/{expense_id}', [PoultryExpensePaymentController::class, 'store'])->name('store');
         Route::delete('/{payment}', [PoultryExpensePaymentController::class, 'destroy'])->name('destroy');

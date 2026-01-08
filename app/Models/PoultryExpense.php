@@ -20,7 +20,9 @@ class PoultryExpense extends Model
         'price',
         'total_amount',
         'description',
-        'expense_date'
+        'expense_date',
+        'payment_status',
+        'paid_amount'
     ];
 
 

@@ -70,7 +70,7 @@ class CustomerController extends Controller
     {
         $customerInfo = Customer::find($customer_id);
         $pageTitle = $customerInfo->name . "'s batches";
-        $batches = PoultryBatch::with('sales')->where('customer_id', $customer_id)->orderBy('batch_start_date', 'desc')->get();
+        $batches = PoultryBatch::with('sales')->where('customer_id', $customer_id)->orderBy('id', 'desc')->get();
 
         // Summary for 3 Cards
         $totalBatches = $batches->count();

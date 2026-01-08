@@ -33,8 +33,8 @@
             <div class="card shadow-sm border-0 rounded-4">
                 <div class="card-body text-center py-4">
                     <i class="fe-check-circle text-success fs-1 mb-3"></i>
-                    <h3 class="fw-bold text-success">{{ number_format($cashExpenses, 2) }} ৳</h3>
-                    <p class="text-muted mb-0 text-uppercase small">Cash Paid</p>
+                    <h3 class="fw-bold text-success">{{ number_format($totalPaidExpenses, 2) }} ৳</h3>
+                    <p class="text-muted mb-0 text-uppercase small">Total Paid</p>
                 </div>
             </div>
         </div>
@@ -43,8 +43,8 @@
         <div class="col-xl-3 col-md-6 mb-3">
             <div class="card shadow-sm border-0 rounded-4">
                 <div class="card-body text-center py-4">
-                    <i class="fe-alert-circle text-warning fs-1 mb-3"></i>
-                    <h3 class="fw-bold text-warning">{{ number_format($totalDueRemaining, 2) }} ৳</h3>
+                    <i class="fe-dollar-sign text-warning fs-1 mb-3"></i>
+                    <h3 class="fw-bold text-warning">{{ number_format($totalDueExpenses, 2) }} ৳</h3>
                     <p class="text-muted mb-0 text-uppercase small">Remaining Due</p>
                 </div>
             </div>
@@ -57,41 +57,6 @@
                     <i class="fe-file-text text-primary fs-1 mb-3"></i>
                     <h3 class="fw-bold text-primary">{{ $totalTransactions }}</h3>
                     <p class="text-muted mb-0 text-uppercase small">Total Entries</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Fully Paid Due Expenses -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body text-center py-4">
-                    <i class="fe-check-double text-success fs-1 mb-3"></i>
-                    <h3 class="fw-bold text-success">{{ $fullyPaidCount }}</h3>
-                    <p class="text-muted mb-0 text-uppercase small">Fully Paid (Due)</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Partially Paid Due Expenses -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body text-center py-4">
-                    <i class="fe-clock text-warning fs-1 mb-3"></i>
-                    <h3 class="fw-bold text-warning">{{ $partiallyPaidCount }}</h3>
-                    <p class="text-muted mb-0 text-uppercase small">Partially Paid</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Latest Expense Date -->
-        <div class="col-xl-3 col-md-6 mb-3">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-body text-center py-4">
-                    <i class="fe-calendar text-info fs-1 mb-3"></i>
-                    <h4 class="fw-bold text-info mb-1">
-                        {{ $latestExpenseDate ? $latestExpenseDate->format('d M Y') : '-' }}
-                    </h4>
-                    <p class="text-muted mb-0 text-uppercase small">Latest Expense</p>
                 </div>
             </div>
         </div>
@@ -174,12 +139,18 @@
                                             <i class="mdi mdi-grease-pencil"></i>
                                         </button>
 
-                                        <button type="button"
-                                                class="btn btn-danger waves-effect waves-light confirmationBtn"
-                                                data-question="Are you sure to delete this expense?"
-                                                data-action="{{ route('poultry.expense.destroy', $expense->id) }}">
-                                            <i class="mdi mdi-trash-can-outline"></i>
-                                        </button>
+                                        @if ($expense->payments->count() == 0)
+                                            <button type="button"
+                                                    class="btn btn-danger waves-effect waves-light confirmationBtn"
+                                                    data-question="Are you sure to delete this expense?"
+                                                    data-action="{{ route('poultry.expense.destroy', $expense->id) }}">
+                                                <i class="mdi mdi-trash-can-outline"></i>
+                                            </button>
+                                        @else
+                                            <button style="cursor: not-allowed;" type="button" class="btn btn-danger waves-effect waves-light" disabled>
+                                                <i class="mdi mdi-trash-can-outline"></i>
+                                            </button>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforeach
