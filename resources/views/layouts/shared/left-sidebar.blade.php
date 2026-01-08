@@ -65,6 +65,7 @@
                     <span class="menu-text"> Dashboard </span>
                 </a>
             </li>
+            
 
             {{-- <li class="menu-item">
                 <a href="#manageEmployee" data-bs-toggle="collapse" class="menu-link">
@@ -240,6 +241,17 @@
                     </div>
                 </li>
             @endcan
+
+            <li class="menu-item ">
+                <a href="{{ route('vaccine.schedule') }}" class="menu-link">
+                    <span class="menu-icon">
+                        <i class="mdi mdi-medical-bag"></i>
+
+                    </span>
+                    <span class="menu-text"> Vaccine Schedule </span>
+                </a>
+            </li>
+            
             @can('general-setting-maintain')
             <li class="menu-item">
                 <a class="menu-link" href="#settings" data-bs-toggle="collapse">

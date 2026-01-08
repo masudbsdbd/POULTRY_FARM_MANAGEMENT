@@ -119,7 +119,7 @@
                                         </a>
                                     </td>
                                     <td class="text-end">
-                                        <button type="button"
+                                        {{-- <button type="button"
                                                 class="btn btn-primary waves-effect waves-light editExpenseBtn"
                                                 data-id="{{ $expense->id }}"
                                                 data-route="{{ route('poultry.expense.update', $expense->id) }}"
@@ -137,7 +137,7 @@
                                                 data-description="{{ $expense->description }}"
                                                 data-date="{{ $expense->expense_date }}">
                                             <i class="mdi mdi-grease-pencil"></i>
-                                        </button>
+                                        </button> --}}
 
                                         @if ($expense->payments->count() == 0)
                                             <button type="button"

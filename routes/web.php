@@ -591,4 +591,9 @@ Route::middleware('authenticated')->group(function () {
         Route::post('/{expense_id}', [PoultryExpensePaymentController::class, 'store'])->name('store');
         Route::delete('/{payment}', [PoultryExpensePaymentController::class, 'destroy'])->name('destroy');
     });
+
+
+    Route::get('/vaccine-schedule', function () {
+        return view('poultry_vaccine.index');
+    })->name('vaccine.schedule');
 });
