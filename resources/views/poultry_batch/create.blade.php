@@ -87,7 +87,7 @@
                                     {{-- Total Chickens --}}
                                     <div class="mb-3 col-md-4">
                                         <label for="total_chickens" class="form-label">Total Chickens</label>
-                                        <input type="number" class="form-control" name="total_chickens" placeholder="Enter total number of chickens"
+                                        <input type="number" class="form-control" id="total_chickens" name="total_chickens" placeholder="Enter total number of chickens"
                                             required value="{{ old('total_chickens', $batch->total_chickens ?? '') }}">
                                     </div>
 
@@ -102,16 +102,16 @@
                                     {{-- Chicken Grade --}}
                                     <div class="col-md-4" style="margin-top: 35px;">
                                         <label>
-                                            <input type="radio" name="chicken_grade" {{ $batch->chicken_grade == 'A' ? 'checked' : '' }} value="A"> A
+                                            <input type="radio" name="chicken_grade" {{ isset($batch->chicken_grade) && $batch->chicken_grade == 'A' ? 'checked' : '' }} value="A"> A
                                         </label>
                                         <label>
-                                            <input type="radio" name="chicken_grade" {{ $batch->chicken_grade == 'B' ? 'checked' : '' }} value="B"> B
+                                            <input type="radio" name="chicken_grade" {{ isset($batch->chicken_grade) && $batch->chicken_grade == 'B' ? 'checked' : '' }} value="B"> B
                                         </label>
                                         <label>
-                                            <input type="radio" name="chicken_grade" {{ $batch->chicken_grade == 'C' ? 'checked' : '' }} value="C"> C
+                                            <input type="radio" name="chicken_grade" {{ isset($batch->chicken_grade) && $batch->chicken_grade == 'C' ? 'checked' : '' }} value="C"> C
                                         </label>
                                         <label>
-                                            <input type="radio" name="chicken_grade" {{ $batch->chicken_grade == 'D' ? 'checked' : '' }} value="D"> D
+                                            <input type="radio" name="chicken_grade" {{ isset($batch->chicken_grade) && $batch->chicken_grade == 'D' ? 'checked' : '' }} value="D"> D
                                         </label>
                                     </div>
 
@@ -132,7 +132,7 @@
                                     {{-- Target Feed Qty --}}
                                     <div class="mb-3 col-md-4">
                                         <label for="target_feed_qty" class="form-label">Target Feed Quantity(not required!)</label>
-                                        <input type="number" step="0.01" class="form-control" name="target_feed_qty"
+                                        <input type="number" step="0.01" class="form-control" id="target_feed_qty" name="target_feed_qty"
                                             placeholder="Enter target feed quantity"
                                             value="{{ old('target_feed_qty', $batch->target_feed_qty ?? '') }}">
                                     </div>
@@ -202,19 +202,38 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-    const select = document.getElementById('chickenTypeSelect');
-    const chicken_type = document.getElementById('chicken_type');
-    const hiddenInput = document.getElementById('chickenTypeInput');
+        const select = document.getElementById('chickenTypeSelect');
+        const chicken_type = document.getElementById('chicken_type');
+        const hiddenInput = document.getElementById('chickenTypeInput');
+        const target_feed_qty = document.getElementById('target_feed_qty');
+        const total_chickens = document.getElementById('total_chickens');
 
-    // Page load: preselect if edit
-    hiddenInput.value && (select.value = hiddenInput.value);
+        // Page load: preselect if edit
+        hiddenInput.value && (select.value = hiddenInput.value);
 
-    // On change, update hidden input
-    select.addEventListener('change', function() {
-        hiddenInput.value = this.value;
-        chicken_type.value = this.value;
-    });
+        // On change, update hidden input
+        select.addEventListener('input', function() {
+            hiddenInput.value = this.value;
+            chicken_type.value = this.value;
 
+            if (this.value === 'broiler') {
+                target_feed_qty.value = total_chickens.value * 5 / 100;
+            }
+
+            if (this.value === 'shonali') {
+                target_feed_qty.value = total_chickens.value * 4 / 100;
+            }
+        });
+
+
+        total_chickens.addEventListener('input', function() {
+            if (select.value === 'broiler') {
+                target_feed_qty.value = total_chickens.value * 5 / 100;
+            }
+            if (select.value === 'shonali') {
+                target_feed_qty.value = total_chickens.value * 4 / 100;
+            }
+        });
     });
 </script>
 

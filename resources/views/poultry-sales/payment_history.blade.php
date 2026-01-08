@@ -38,7 +38,7 @@
             <div class="card bg-warning text-white shadow-sm rounded-4">
                 <div class="card-body text-center">
                     <i class="fe-calendar fs-1 mb-2"></i>
-                    <h4 class="mb-0">{{ $payments->count() > 0 ? $payments->first()->payment_date->format('d M Y') : '-' }}</h4>
+                    <h4 class="mb-0">{{ $payments->count() > 0 ? isset($payments->first()->payment_date) ? $payments->first()->payment_date->format('d M Y') : '-' : '-' }}</h4>
                     <small>Latest Payment Date</small>
                 </div>
             </div>
@@ -112,7 +112,7 @@
     <!-- Transactions Table -->
     <div class="card">
         <div class="card-body">
-            <table id="paymentHistoryTable" class="table dt-responsive nowrap w-100">
+            <table id="basic-datatables" class="table dt-responsive nowrap w-100">
                 <thead>
                     <tr>
                         <th>SL</th>
@@ -131,24 +131,60 @@
                             <td>{{ isset($payment->payment_date) ? $payment->payment_date->format('d M Y') : '-' }}</td>
                             <td>{{ number_format($payment->amount, 2) }} ৳</td>
                             <td>Sale #{{ $payment->sale_id }}</td>
-                            <td>{{ $payment->sale->batch->batch_name ?? '-' }}</td>
+                            {{-- <td>{{ $payment->sale->batch->batch_name ?? '-' }}</td> --}}
+                             <td>
+                                <a href="{{ route('customer.manageBatch', $payment->sale->batch_id) }}" class="text-primary fw-bold">
+                                    {{ $payment->sale->batch->batch_name ?? 'Deleted Batch' }}
+                                </a>
+                            </td>
                             <td>{{ $payment->sale->batch->customer->name ?? '-' }}</td>
                             <td>{{ $payment->note ?? '-' }}</td>
                         </tr>
                     @empty
                         <tr>
                             <td colspan="7" class="text-center py-4">No payments found.</td>
+                            <td colspan="" class="d-none text-center py-4">No payments found.</td>
+                            <td colspan="" class="d-none text-center py-4">No payments found.</td>
+                            <td colspan="" class="d-none text-center py-4">No payments found.</td>
+                            <td colspan="" class="d-none text-center py-4">No payments found.</td>
+                            <td colspan="" class="d-none text-center py-4">No payments found.</td>
+                            <td colspan="" class="d-none text-center py-4">No payments found.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
+            <div class="d-flex justify-content-center mt-4">
+                {{ $payments->appends(request()->query())->links() }}
+            </div>
         </div>
     </div>
+
 </div>
 
 <x-confirmation-modal></x-confirmation-modal>
 @endsection
 
+
 @section('script')
-@vite(['resources/js/app.js', 'resources/js/pages/datatables.init.js'])
+@vite(['resources/js/app.js'])
+{{-- @vite(['resources/js/app.js', 'resources/js/pages/datatables.init.js']) --}}
+
+<script>
+    $('#basic-datatables').DataTable({
+        responsive: true,
+         pageLength: 10,
+         lengthMenu: [10, 25, 50, 100],
+         order: [[1, 'desc']],
+         language: {
+                search: "Search:",
+                lengthMenu: "Show _MENU_ entries"
+            },
+            language: {
+                search: "Search:",
+                lengthMenu: "Show _MENU_ entries"
+            },
+            paging: false
+        // অন্য অপশন
+    });
+</script>
 @endsection

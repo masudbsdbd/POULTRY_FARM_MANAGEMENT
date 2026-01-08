@@ -206,8 +206,9 @@ class PoultrySaleController extends Controller
 
     public function paymentHistory(Request $request)
     {
-        $query = PoultrySalesPayment::with(['sale.batch.customer'])
-            ->orderBy('payment_date', 'desc');
+        $pageTitle = 'Payment History';
+
+        $query = PoultrySalesPayment::with(['sale.batch.customer']);
 
         // Filters
         if ($request->filled('sale_id')) {
@@ -215,15 +216,11 @@ class PoultrySaleController extends Controller
         }
 
         if ($request->filled('batch_id')) {
-            $query->whereHas('sale', function ($q) use ($request) {
-                $q->where('batch_id', $request->batch_id);
-            });
+            $query->whereHas('sale', fn($q) => $q->where('batch_id', $request->batch_id));
         }
 
         if ($request->filled('customer_id')) {
-            $query->whereHas('sale.batch', function ($q) use ($request) {
-                $q->where('customer_id', $request->customer_id);
-            });
+            $query->whereHas('sale.batch', fn($q) => $q->where('customer_id', $request->customer_id));
         }
 
         if ($request->filled('start_date')) {
@@ -242,26 +239,111 @@ class PoultrySaleController extends Controller
             $query->where('amount', '<=', $request->max_amount);
         }
 
-        $payments = $query->get();
+        // Search in note
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('note', 'like', "%{$search}%")
+                    ->orWhereHas('sale.batch', fn($b) => $b->where('batch_name', 'like', "%{$search}%"))
+                    ->orWhereHas('sale.batch.customer', fn($c) => $c->where('name', 'like', "%{$search}%"));
+            });
+        }
 
-        // Summary
-        $totalPayments = $payments->sum('amount');
-        $avgPayment = $payments->count() > 0 ? $payments->avg('amount') : 0;
-        $paymentCount = $payments->count();
+        // All Filtered Data for Summary
+        $allPayments = (clone $query)->get();
 
-        // For Filter Dropdowns
+        $totalPayments = $allPayments->sum('amount');
+        $avgPayment = $allPayments->count() > 0 ? $allPayments->avg('amount') : 0;
+        $paymentCount = $allPayments->count();
+
+        // Paginated Data for Table
+        $payments = $query->orderBy('payment_date', 'desc')->paginate(10);
+
+        // For Filters
         $batches = PoultryBatch::orderBy('batch_name')->pluck('batch_name', 'id');
         $customers = Customer::orderBy('name')->pluck('name', 'id');
-        $sales = PoultrySale::orderBy('sale_date', 'desc')->pluck('id', 'id');
+        $sales = PoultrySale::orderBy('sale_date', 'desc')->pluck('id', 'id'); // অথবা আরো ভালো label যোগ করতে পারো
 
         return view('poultry-sales.payment_history', compact(
-            'payments',
+            'pageTitle',
+            'payments', // paginated
             'totalPayments',
             'avgPayment',
             'paymentCount',
             'batches',
             'customers',
             'sales'
+        ));
+    }
+
+
+
+    public function salesReport(Request $request)
+    {
+        $pageTitle = 'All Sales Report';
+
+        $query = PoultrySale::with(['batch.customer']);
+
+        // === All Filters + Search ===
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('note', 'like', "%$search%")
+                    ->orWhereHas('batch', fn($b) => $b->where('batch_name', 'like', "%$search%"))
+                    ->orWhereHas('batch.customer', fn($c) => $c->where('name', 'like', "%$search%"));
+            });
+        }
+
+        if ($request->filled('batch_id')) {
+            $query->where('batch_id', $request->batch_id);
+        }
+        if ($request->filled('customer_id')) {
+            $query->whereHas('batch', fn($q) => $q->where('customer_id', $request->customer_id));
+        }
+        if ($request->filled('sale_type')) {
+            $query->where('sale_type', $request->sale_type);
+        }
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+        if ($request->filled('sales_channel')) {
+            $query->where('sales_channel', $request->sales_channel);
+        }
+        if ($request->filled('date_from')) {
+            $query->whereDate('sale_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate('sale_date', '<=', $request->date_to);
+        }
+
+        // Summary - All Filtered Data
+        $allFilteredSales = (clone $query)->get();
+
+        $totalSales = $allFilteredSales->count();
+        $totalRevenue = $allFilteredSales->sum('total_amount');
+        $totalPaid = $allFilteredSales->sum('paid_amount');
+        $totalDue = $totalRevenue - $totalPaid;
+        $byPiece = $allFilteredSales->where('sale_type', 'by_piece')->sum('quantity');
+        $byWeight = $allFilteredSales->where('sale_type', 'by_weight')->sum('weight_kg');
+
+        // Pagination for Table
+        $sales = $query->orderBy('sale_date', 'desc')->paginate(10);
+
+        // For Filters
+        $batches = PoultryBatch::orderBy('batch_name')->pluck('batch_name', 'id');
+        $customers = Customer::orderBy('name')->pluck('name', 'id');
+
+        return view('poultry-sales.all-sales-report', compact(
+            'pageTitle',
+            'sales',
+            'batches',
+            'customers',
+            'totalSales',
+            'totalRevenue',
+            'totalPaid',
+            'totalDue',
+            'byPiece',
+            'byWeight'
         ));
     }
 }

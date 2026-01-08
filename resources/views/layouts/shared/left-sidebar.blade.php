@@ -82,23 +82,7 @@
                 </div>
             </li> --}}
 
-            <li class="menu-item">
-                <a href="#allReports" data-bs-toggle="collapse" class="menu-link">
-                    <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
-                    <span class="menu-text"> Reports </span>
-                    <span class="menu-arrow"></span>
-                </a>
-                <div class="collapse" id="allReports">
-                    <ul class="sub-menu">
-                        <li class="menu-item">
-                            <a class="menu-link" href="{{ route('poultry.sales.payments.history') }}"><span class="menu-text">Payment Report</span></a>
-                        </li>
-                        <li class="menu-item">
-                            <a class="menu-link" href="{{ route('challan.used_history') }}"><span class="menu-text">Product Used History</span></a>
-                        </li>
-                    </ul>
-                </div>
-            </li>
+            
 
             @can('product-list')
             {{-- <li class="menu-item">
@@ -143,29 +127,7 @@
             @endcan
 
 
-            {{-- pultry management start from here --}}
-            {{-- poultry batch management start --}}
-            <li class="menu-item">
-                <a href="#managePoultryBatch" data-bs-toggle="collapse" class="menu-link">
-                    <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
-                    <span class="menu-text"> Batches </span>
-                    <span class="menu-arrow"></span>
-                </a>
-                <div class="collapse" id="managePoultryBatch">
-                    <ul class="sub-menu">
-                        <li class="menu-item">
-                            <a class="menu-link" href="{{ route('poultrybatch.index') }}"><span class="menu-text">All Active Batches</span></a>
-                        </li>
-                    </ul>
-                    <ul class="sub-menu">
-                        <li class="menu-item">
-                            <a class="menu-link" href="{{ route('poultrybatch.inactive') }}"><span class="menu-text">All Inactive Batches</span></a>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-            {{-- poultry batch management end --}}
-            {{-- pultry management end here --}}
+            
             
             
 
@@ -204,6 +166,51 @@
                 </div>
             </li>
             @endcan
+
+
+            {{-- pultry management start from here --}}
+            {{-- poultry batch management start --}}
+            <li class="menu-item">
+                <a href="#managePoultryBatch" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
+                    <span class="menu-text"> Batches </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="managePoultryBatch">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('poultrybatch.index') }}"><span class="menu-text">All Active Batches</span></a>
+                        </li>
+                    </ul>
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('poultrybatch.inactive') }}"><span class="menu-text">All Inactive Batches</span></a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            {{-- poultry batch management end --}}
+            {{-- pultry management end here --}}
+
+
+            <li class="menu-item">
+                <a href="#allReports" data-bs-toggle="collapse" class="menu-link">
+                    <span class="menu-icon"><i class="mdi mdi-account-multiple"></i></span>
+                    <span class="menu-text"> Reports </span>
+                    <span class="menu-arrow"></span>
+                </a>
+                <div class="collapse" id="allReports">
+                    <ul class="sub-menu">
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('poultry.sales.payments.history') }}"><span class="menu-text">Payment Report</span></a>
+                        </li>
+                        <li class="menu-item">
+                            <a class="menu-link" href="{{ route('poultry.sale.reports.all-sales') }}"><span class="menu-text">Sales History</span></a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            
 
             @can('user-list')
                 <li class="menu-item">
