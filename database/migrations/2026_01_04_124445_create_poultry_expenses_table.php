@@ -25,6 +25,8 @@ return new class extends Migration
             $table->enum('unit', ['bag', 'piece', 'kg', 'litre', 'gram', 'bottle', 'pack', 'other']);
             $table->decimal('price', 8, 2);
             $table->decimal('total_amount', 8, 2);
+            $table->decimal('paid_amount', 8, 2);
+            $table->enum('payment_status', ['due', 'partial', 'paid'])->default('due');
             $table->text('description')->nullable();
             $table->date('expense_date');
             $table->timestamps();

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\PoultryBatchController;
+use App\Http\Controllers\PoultryExpensePaymentController;
 use App\Http\Controllers\PoultryOthersIncomeController;
 use App\Http\Controllers\PoultrySaleController;
 use Illuminate\Support\Facades\Route;
@@ -581,5 +582,12 @@ Route::middleware('authenticated')->group(function () {
         Route::post('/', [PoultryOthersIncomeController::class, 'store'])->name('store');
         Route::put('/{income}', [PoultryOthersIncomeController::class, 'update'])->name('update');
         Route::delete('/{income}', [PoultryOthersIncomeController::class, 'destroy'])->name('destroy');
+    });
+
+
+    Route::prefix('poultry/expense-payment')->name('poultry.expense.payment.')->group(function () {
+        Route::get('/{expense_id}', [PoultryExpensePaymentController::class, 'index'])->name('index');
+        Route::post('/{expense_id}', [PoultryExpensePaymentController::class, 'store'])->name('store');
+        Route::delete('/{payment}', [PoultryExpensePaymentController::class, 'destroy'])->name('destroy');
     });
 });

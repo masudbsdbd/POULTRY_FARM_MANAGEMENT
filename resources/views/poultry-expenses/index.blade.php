@@ -15,6 +15,88 @@
 <div class="container-fluid">
     @include('layouts.shared.page-title', ['title' => 'Expense', 'subtitle' => 'Poultry Expense'])
 
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <!-- Total Expenses -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body text-center py-4">
+                    <i class="fe-dollar-sign text-danger fs-1 mb-3"></i>
+                    <h3 class="fw-bold text-danger">{{ number_format($totalExpenses, 2) }} ৳</h3>
+                    <p class="text-muted mb-0 text-uppercase small">Total Expenses</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cash Paid -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body text-center py-4">
+                    <i class="fe-check-circle text-success fs-1 mb-3"></i>
+                    <h3 class="fw-bold text-success">{{ number_format($cashExpenses, 2) }} ৳</h3>
+                    <p class="text-muted mb-0 text-uppercase small">Cash Paid</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Due Amount -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body text-center py-4">
+                    <i class="fe-alert-circle text-warning fs-1 mb-3"></i>
+                    <h3 class="fw-bold text-warning">{{ number_format($totalDueRemaining, 2) }} ৳</h3>
+                    <p class="text-muted mb-0 text-uppercase small">Remaining Due</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Transactions -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body text-center py-4">
+                    <i class="fe-file-text text-primary fs-1 mb-3"></i>
+                    <h3 class="fw-bold text-primary">{{ $totalTransactions }}</h3>
+                    <p class="text-muted mb-0 text-uppercase small">Total Entries</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fully Paid Due Expenses -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body text-center py-4">
+                    <i class="fe-check-double text-success fs-1 mb-3"></i>
+                    <h3 class="fw-bold text-success">{{ $fullyPaidCount }}</h3>
+                    <p class="text-muted mb-0 text-uppercase small">Fully Paid (Due)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Partially Paid Due Expenses -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body text-center py-4">
+                    <i class="fe-clock text-warning fs-1 mb-3"></i>
+                    <h3 class="fw-bold text-warning">{{ $partiallyPaidCount }}</h3>
+                    <p class="text-muted mb-0 text-uppercase small">Partially Paid</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Latest Expense Date -->
+        <div class="col-xl-3 col-md-6 mb-3">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body text-center py-4">
+                    <i class="fe-calendar text-info fs-1 mb-3"></i>
+                    <h4 class="fw-bold text-info mb-1">
+                        {{ $latestExpenseDate ? $latestExpenseDate->format('d M Y') : '-' }}
+                    </h4>
+                    <p class="text-muted mb-0 text-uppercase small">Latest Expense</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -42,6 +124,8 @@
                                 <th>Quantity</th>
                                 <th>Unit</th>
                                 <th>Total Amount</th>
+                                <th>Payment Status</th>
+                                <th>Payments</th>
                                 <th class="text-end">Action</th>
                             </tr>
                         </thead>
@@ -55,6 +139,20 @@
                                     <td>{{ $expense->quantity }}</td>
                                     <td>{{ $expense->unit }}</td>
                                     <td>{{ number_format($expense->total_amount, 2) }}</td>
+                                    <td>
+                                        {{-- @if($expense->transaction_type == 'cash')
+                                            <span class="badge bg-success">Cash Paid</span>
+                                        @else --}}
+                                            <span class="badge bg-{{ $expense->payment_status == 'paid' ? 'success' : ($expense->payment_status == 'partial' ? 'warning' : 'danger') }}">
+                                                {{ ucfirst($expense->payment_status) }}
+                                            </span>
+                                        {{-- @endif --}}
+                                    </td>
+                                    <td class="text-end">
+                                        <a href="{{ route('poultry.expense.payment.index', $expense->id) }}" class="btn btn-sm btn-outline-info me-1">
+                                            <i class="fe-dollar-sign"></i> Payments
+                                        </a>
+                                    </td>
                                     <td class="text-end">
                                         <button type="button"
                                                 class="btn btn-primary waves-effect waves-light editExpenseBtn"

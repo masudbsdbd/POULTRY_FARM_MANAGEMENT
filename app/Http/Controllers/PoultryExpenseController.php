@@ -16,7 +16,23 @@ class PoultryExpenseController extends Controller
 
         $invNumber = $this->getNextInvoiceNumber();
 
-        return view('poultry-expenses.index', compact('bathInfo', 'expenses', 'invNumber'));
+
+        // Summary Calculations
+        $totalExpenses = $expenses->sum('total_amount');
+
+        $cashExpenses = $expenses->where('transaction_type', 'cash')->sum('total_amount');
+        $dueExpenses = $expenses->where('transaction_type', 'due')->sum('total_amount');
+
+        $totalPaidFromDue = $expenses->where('transaction_type', 'due')->sum('paid_amount');
+        $totalDueRemaining = $dueExpenses - $totalPaidFromDue;
+
+        $fullyPaidCount = $expenses->where('transaction_type', 'due')->where('payment_status', 'paid')->count();
+        $partiallyPaidCount = $expenses->where('transaction_type', 'due')->where('payment_status', 'partial')->count();
+
+        $totalTransactions = $expenses->count();
+        $latestExpenseDate = $expenses->max('expense_date');
+
+        return view('poultry-expenses.index', compact('bathInfo', 'expenses', 'invNumber', 'totalExpenses', 'totalTransactions', 'latestExpenseDate', 'cashExpenses', 'dueExpenses', 'totalPaidFromDue', 'totalDueRemaining', 'fullyPaidCount', 'partiallyPaidCount'));
     }
 
     public function store(Request $request)

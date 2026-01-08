@@ -22,4 +22,19 @@ class PoultryExpense extends Model
         'description',
         'expense_date'
     ];
+
+
+    protected $casts = [
+        'expense_date' => 'date:Y-m-d',
+    ];
+
+    public function payments()
+    {
+        return $this->hasMany(PoultryExpensePayment::class, 'expense_id');
+    }
+
+    public function batch()
+    {
+        return $this->belongsTo(PoultryBatch::class, 'batch_id');
+    }
 }
