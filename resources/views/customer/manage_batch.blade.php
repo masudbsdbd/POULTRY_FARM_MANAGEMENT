@@ -28,7 +28,7 @@
     {{-- dashboard cards --}}
     <div class="row g-3">
          <div class="col-md-6 col-xl-4">
-            <a href="{{ route('customer.index') }}" class="btn btn-info"><i class="mdi mdi-arrow-left"></i>back</a>
+            <a href="{{ route('customer.batches', $customerInfo->id) }}" class="btn btn-info"><i class="mdi mdi-arrow-left"></i>back</a>
         </div>
         <div class="col-md-6 col-xl-4"></div>
         @if ($batchInfo->status == 'active')

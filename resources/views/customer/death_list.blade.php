@@ -8,7 +8,7 @@
 <!-- Start Content-->
 <div class="container-fluid">
 
-    @include('layouts.shared.page-title', ['title' => 'Building', 'subtitle' => 'Building'])
+    @include('layouts.shared.page-title', ['title' => 'Death List', 'subtitle' => 'Death List'])
 
     <div class="row">
         <div class="col-12">
